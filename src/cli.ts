@@ -7,7 +7,7 @@ const program = new Command();
 
 program
   .name("codeowners")
-  .description("CLI tool for managing CODEOWNERS workflow");
+  .description("CLI tool for grouping and managing staged files by CODEOWNERS");
 
 program
   .command("list")
@@ -15,7 +15,7 @@ program
   .option("-o, --owner <owner>", "Filter by specific code owner")
   .option(
     "-i, --include <patterns>",
-    "Filter by owner patterns (comma-separated)",
+    "Filter by owner patterns (comma-separated)"
   )
   .action(listCodeowners);
 
