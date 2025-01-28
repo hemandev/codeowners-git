@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.1.0
+
+### Minor Changes
+
+- a639a0b: - Support for `--no-verify` in `branch` command
+
 ## 1.0.5
 
 ### Patch Changes
