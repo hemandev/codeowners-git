@@ -18,7 +18,7 @@ program
 
 program
   .command("branch")
-  .description("Create new branch with owner changes")
+  .description("Create new branch with codeowner changes")
   .requiredOption("-o, --owner <owner>", "Code owner name")
   .requiredOption("-b, --branch <branch>", "Branch name")
   .requiredOption("-m, --message <message>", "Commit message")

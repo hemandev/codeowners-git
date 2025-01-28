@@ -34,8 +34,7 @@
     "test:ci": "bun test --watch",
     "format": "biome format --write ./src",
     "lint": "biome lint ./src",
-    "prepublish": "bun run build:dist && bun test",
-    "publish": "bun publish --access public"
+    "prepublish": "bun run build:dist && bun test"
   },
   "bin": {
     "codeowners-git": "dist/cli.js"
