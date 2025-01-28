@@ -22,6 +22,7 @@ program
   .requiredOption("-o, --owner <owner>", "Code owner name")
   .requiredOption("-b, --branch <branch>", "Branch name")
   .requiredOption("-m, --message <message>", "Commit message")
+  .option("-n, --no-verify", "Skip lint-staged or any other ci checks")
   .action(branch);
 
 program.parse(process.argv);

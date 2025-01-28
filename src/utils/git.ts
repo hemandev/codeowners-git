@@ -3,6 +3,11 @@ import { log } from "../utils/logger";
 
 const git: SimpleGit = simpleGit();
 
+export type CommitOptions = {
+  message: string;
+  noVerify?: boolean;
+};
+
 export const getChangedFiles = async (): Promise<string[]> => {
   const status = await git.status();
   return status.files.map((file) => file.path);
@@ -21,13 +26,17 @@ export const checkout = async (name: string): Promise<void> => {
 
 export const commitChanges = async (
   files: string[],
-  message: string,
+  { message, noVerify = false }: CommitOptions
 ): Promise<void> => {
   log.info("Adding files to commit...");
   await git.add(files);
 
+  const commitOptions = noVerify ? ["--no-verify"] : [];
+
   log.info(`Running commit with message: "${message}"`);
-  await git.commit(message);
+  await git.commit(message, [], {
+    ...(noVerify ? { "--no-verify": null } : {}),
+  });
 
   log.info("Commit finished successfully.");
 };

@@ -11,6 +11,7 @@ export type BranchOptions = {
   owner?: string;
   branch?: string;
   message?: string;
+  verify?: boolean;
 };
 
 export const branch = async (options: BranchOptions) => {
@@ -35,8 +36,15 @@ export const branch = async (options: BranchOptions) => {
       log.info(`Creating new branch "${options.branch}"...`);
       await createBranch(options.branch);
 
-      log.info(`Committing changes with message: "${options.message}"...`);
-      await commitChanges(filesToCommit, options.message);
+      log.info(
+        `Committing changes with message: "${
+          options.message
+        }" ${!options.verify}...`
+      );
+      await commitChanges(filesToCommit, {
+        message: options.message ?? "",
+        noVerify: !options.verify,
+      });
     } finally {
       log.info(`Checking out original branch "${originalBranch}"...`);
       await checkout(originalBranch);

@@ -84,6 +84,7 @@ Options:
 - `--owner, -o` Specify owner(s) to add/remove
 - `--branch, -b` Specify branch pattern
 - `--message, -m` Commit message for changes
+- `--no-verify, -n` Skips lint-staged and other checks before committing
 
 Example:
 
