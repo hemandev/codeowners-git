@@ -26,14 +26,20 @@ jobs:
 
       - name: Set up Node and Bun
         uses: oven-sh/setup-bun@v2
-        with:
-          registry-url: https://registry.npmjs.org
 
       - name: Install Dependencies
         run: bun install
 
       - name: Build
         run: bun build:dist
+
+      - name: Creating .npmrc
+        run: |
+          cat << EOF > "$HOME/.npmrc"
+            //registry.npmjs.org/:_authToken=$NPM_TOKEN
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
