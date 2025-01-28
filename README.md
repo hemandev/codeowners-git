@@ -1,5 +1,9 @@
 # codeowners-git
 
+[![Release](https://github.com/hemandev/codeowners-git/actions/workflows/release.yml/badge.svg)](https://github.com/hemandev/codeowners-git/actions/workflows/release.yml)
+[![npm version](https://img.shields.io/npm/v/codeowners-git)](https://www.npmjs.com/package/codeowners-git)
+[![license](https://img.shields.io/npm/l/codeowners-git)](LICENSE)
+
 Managing large-scale migrations in big monorepos with multiple codeowners can be overwhelming. Massive PRs touching thousands of files make it hard for teams to review changes efficiently.
 
 `codeowners-git` solves this by:
