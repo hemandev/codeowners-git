@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.0.1
+
+### Patch Changes
+
+- 8279aca: - Update the width for `No` column in `list` command
+
 ## 1.0.0
 
 ### Major Changes
