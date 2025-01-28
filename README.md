@@ -3,9 +3,10 @@
 Managing large-scale migrations in big monorepos with multiple codeowners can be overwhelming. Massive PRs touching thousands of files make it hard for teams to review changes efficiently.
 
 `codeowners-git` solves this by:
-• Identifying files owned by specific teams using the CODEOWNERS file.
-• Creating compact, team-specific branches with only their affected files.
-• Streamlining the review process with smaller, targeted PRs.
+
+- Identifying files owned by specific teams using the CODEOWNERS file.
+- Creating compact, team-specific branches with only their affected files.
+- Streamlining the review process with smaller, targeted PRs.
 
 ## Installation
 
