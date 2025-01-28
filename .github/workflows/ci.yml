@@ -12,12 +12,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 22
+      - name: Set up Node and Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
         run: |
