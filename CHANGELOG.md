@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.0.4
+
+### Patch Changes
+
+- 1cdcc94: - Update branch command description
+
 ## 1.0.3
 
 ### Patch Changes
