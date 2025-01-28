@@ -11,12 +11,9 @@ program
 
 program
   .command("list")
-  .description("List all git changed files by CODEOWNER")
+  .description("Lists all git changed files by CODEOWNER")
   .option("-o, --owner <owner>", "Filter by specific code owner")
-  .option(
-    "-i, --include <patterns>",
-    "Filter by owner patterns (comma-separated)"
-  )
+  .option("-i, --include <patterns>", "Filter by owner patterns")
   .action(listCodeowners);
 
 program
