@@ -3,15 +3,28 @@
   "version": "1.0.0",
   "module": "src/cli.ts",
   "type": "module",
+  "private": false,
   "files": [
     "dist/**/*"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "hemandev",
+  "engines": {
+    "node": ">=17.x",
+    "npm": ">=8.x <9"
+  },
+  "keywords": [
+    "codeowners",
+    "git",
+    "typescript"
+  ],
   "license": "MIT",
   "homepage": "https://github.com/hemandev/codeowners-git.git",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hemandev/codeowners-git.git"
+    "url": "git+https://github.com/hemandev/codeowners-git.git"
   },
   "scripts": {
     "start": "bun run src/cli.ts",
@@ -21,7 +34,8 @@
     "test:ci": "bun test --watch",
     "format": "biome format --write ./src",
     "lint": "biome lint ./src",
-    "prepublish": "bun run build && bun test"
+    "prepublish": "bun run build && bun test",
+    "publish": "changeset publish"
   },
   "bin": {
     "codeowners-git": "dist/cli.js"
@@ -46,8 +60,5 @@
     "commander": "^13.1.0",
     "micromatch": "^4.0.8",
     "simple-git": "^3.27.0"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }
