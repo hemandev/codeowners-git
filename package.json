@@ -1,0 +1,38 @@
+{
+  "name": "codeowners-git",
+  "module": "src/cli.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --compile --outfile bin/codeowners-git",
+    "build:dist": "bun build src/cli.ts --outdir dist/ --target node",
+    "test": "bun test --watch",
+    "test:ci": "bun test --watch",
+    "format": "biome format --write ./src",
+    "lint": "biome lint ./src",
+    "prepublish": "bun run build && bun test"
+  },
+  "bin": {
+    "codeowners-git": "dist/cli.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "biome": "^0.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.3",
+    "@types/micromatch": "^4.0.9",
+    "@types/node": "^22.12.0",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "codeowners": "^5.1.1",
+    "commander": "^13.1.0",
+    "micromatch": "^4.0.8",
+    "simple-git": "^3.27.0"
+  }
+}
