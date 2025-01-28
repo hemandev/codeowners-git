@@ -12,6 +12,10 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Creating compact, team-specific branches with only their affected files.
 - Streamlining the review process with smaller, targeted PRs.
 
+https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
+
+
+
 ## Installation
 
 ### Using npx (recommended)
@@ -104,6 +108,11 @@ bun test
 ```
 
 5. Submit a pull request
+
+## Alternatives
+[@snyk/github-codeowners](https://github.com/snyk/github-codeowners)
+
+[codeowners](https://github.com/beaugunderson/codeowners)
 
 ## License
 
