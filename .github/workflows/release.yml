@@ -48,7 +48,14 @@ jobs:
         with:
           commit: "chore(release): version package"
           title: "chore(release): version package"
-          publish: bun changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{secrets.NPM_TOKEN}}
+
+      - name: Publish
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: bun changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
