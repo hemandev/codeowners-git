@@ -12,8 +12,8 @@
   },
   "author": "hemandev",
   "engines": {
-    "node": ">=17.x",
-    "npm": ">=8.x <9"
+    "node": ">=18.x",
+    "npm": ">=8.x"
   },
   "keywords": [
     "codeowners",
