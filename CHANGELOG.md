@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.0.3
+
+### Patch Changes
+
+- 876f467: - Update list command description
+
 ## 1.0.2
 
 ### Patch Changes
