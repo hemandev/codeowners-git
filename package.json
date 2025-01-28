@@ -30,6 +30,7 @@
     "@types/bun": "latest",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
+    "@changesets/cli": "^2.27.12",
     "biome": "^0.3.3"
   },
   "peerDependencies": {
