@@ -28,7 +28,7 @@ export const listCodeowners = async (options: ListOptions) => {
       if (options.include) {
         const patterns = options.include;
         filteredFiles = filesWithOwners.filter(({ owners }) =>
-          matchOwners(owners, patterns),
+          matchOwners(owners, patterns)
         );
       }
 
@@ -41,13 +41,13 @@ export const listCodeowners = async (options: ListOptions) => {
       log.header(
         options.include
           ? `Changed files matching owners: ${options.include}`
-          : "Changed files with code owners:",
+          : "Changed files with code owners:"
       );
 
       log.formattedTable(tableData, [
         {
           name: "No",
-          width: 10,
+          width: 8,
         },
         {
           name: "File",
