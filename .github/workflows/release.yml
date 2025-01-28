@@ -41,8 +41,9 @@ jobs:
         with:
           commit: "chore(release): version package"
           title: "chore(release): version package"
-          publish: bun run publish
+          publish: bun publish
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_TOKEN: ${{secrets.NPM_TOKEN}}
+          BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
