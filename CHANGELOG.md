@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.0.2
+
+### Patch Changes
+
+- aafd5b0: - Updated command description
+
 ## 1.0.1
 
 ### Patch Changes
