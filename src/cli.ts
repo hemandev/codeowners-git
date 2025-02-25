@@ -23,6 +23,17 @@ program
   .requiredOption("-b, --branch <branch>", "Branch name")
   .requiredOption("-m, --message <message>", "Commit message")
   .option("-n, --no-verify", "Skip lint-staged or any other ci checks")
+  .option("-p, --push", "Push branch to remote after commit")
+  .option("-r, --remote <remote>", "Remote name to push to", "origin")
+  .option(
+    "-u, --upstream <upstream>",
+    "Upstream branch name (defaults to local branch name)"
+  )
+  .option("-f, --force", "Force push to remote")
+  .option(
+    "-k, --keep-branch-on-failure",
+    "Keep the created branch even if operation fails"
+  )
   .action(branch);
 
 program.parse(process.argv);
