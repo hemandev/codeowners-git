@@ -1,5 +1,13 @@
 # codeowners-git
 
+## 1.2.0
+
+### Minor Changes
+
+- 95c75be: Support `push` option to auto push changes to the remote branch
+- 3d06276: New `multi-branch` command to create branches for all codeowners with changes
+- 54ae678: Show output from git while pushing
+
 ## 1.1.0
 
 ### Minor Changes
