@@ -14,8 +14,6 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 
 https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
 
-
-
 ## Installation
 
 ### Using npx (recommended)
@@ -85,12 +83,53 @@ Options:
 - `--branch, -b` Specify branch pattern
 - `--message, -m` Commit message for changes
 - `--no-verify, -n` Skips lint-staged and other checks before committing
+- `--push, -p` Push branch to remote after commit
+- `--remote, -r` Remote name to push to (default: "origin")
+- `--upstream, -u` Upstream branch name (defaults to local branch name)
+- `--force, -f` Force push to remote
+- `--keep-branch-on-failure, -k` Keep the created branch even if operation fails
 
 Example:
 
 ```bash
-codeowners-git branch -o @myteam -b "feature/*" -m "Add feature branch ownership"
+codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
 ```
+
+### `multi-branch`
+
+Create branches for all codeowners with changes.
+
+Usage:
+
+```bash
+codeowners-git multi-branch [options]
+```
+
+Options:
+
+- `--branch, -b` Base branch name (will be prefixed with codeowner name)
+- `--message, -m` Base commit message (will be suffixed with codeowner name)
+- `--no-verify, -n` Skips lint-staged and other checks before committing
+- `--push, -p` Push branches to remote after commit
+- `--remote, -r` Remote name to push to (default: "origin")
+- `--upstream, -u` Upstream branch name pattern (defaults to local branch name)
+- `--force, -f` Force push to remote
+- `--keep-branch-on-failure, -k` Keep created branches even if operation fails
+
+Example:
+
+```bash
+codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -p
+```
+
+This will:
+
+1. Find all codeowners for the changed files in your repository
+2. For each codeowner (e.g., @team-a, @team-b):
+   - Create a branch like `team-a/feature/new-feature`
+   - Commit only the files owned by that team
+   - Add a commit message like "Add new feature - @team-a"
+   - Push each branch to the remote if the `-p` flag is provided
 
 ## Contributing
 
@@ -111,6 +150,7 @@ bun test
 5. Submit a pull request
 
 ## Alternatives
+
 [@snyk/github-codeowners](https://github.com/snyk/github-codeowners)
 
 [codeowners](https://github.com/beaugunderson/codeowners)

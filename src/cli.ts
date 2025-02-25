@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { listCodeowners } from "./commands/list";
 import { branch } from "./commands/branch";
+import { multiBranch } from "./commands/multi-branch";
 
 const program = new Command();
 
@@ -35,5 +36,30 @@ program
     "Keep the created branch even if operation fails"
   )
   .action(branch);
+
+program
+  .command("multi-branch")
+  .description("Create branches for all codeowners")
+  .requiredOption(
+    "-b, --branch <branch>",
+    "Base branch name (will be suffixed with codeowner name)"
+  )
+  .requiredOption(
+    "-m, --message <message>",
+    "Base commit message (will be suffixed with codeowner name)"
+  )
+  .option("-n, --no-verify", "Skip lint-staged or any other ci checks")
+  .option("-p, --push", "Push branches to remote after commit")
+  .option("-r, --remote <remote>", "Remote name to push to", "origin")
+  .option(
+    "-u, --upstream <upstream>",
+    "Upstream branch name pattern (defaults to local branch name)"
+  )
+  .option("-f, --force", "Force push to remote")
+  .option(
+    "-k, --keep-branch-on-failure",
+    "Keep created branches even if operation fails"
+  )
+  .action(multiBranch);
 
 program.parse(process.argv);
