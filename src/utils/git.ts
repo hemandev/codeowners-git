@@ -2,6 +2,7 @@ import simpleGit, { type SimpleGit } from "simple-git";
 import { log } from "../utils/logger";
 import fs from "fs/promises";
 import path from "path";
+import { spawn } from "child_process";
 
 const git: SimpleGit = simpleGit();
 
@@ -192,17 +193,35 @@ export const pushBranch = async (
 
   log.info(`Pushing branch "${branchName}" to ${remote}/${targetUpstream}...`);
 
-  const pushOptions: string[] = [];
-  if (force) {
-    pushOptions.push("--force");
-  }
-  if (noVerify) {
-    pushOptions.push("--no-verify");
-  }
-
   try {
-    await git.push(remote, `${branchName}:${targetUpstream}`, pushOptions);
-    log.success(`Successfully pushed to ${remote}/${targetUpstream}`);
+    const pushArgs = [];
+    pushArgs.push(remote, `${branchName}:${targetUpstream}`);
+
+    if (force) {
+      pushArgs.push("--force");
+    }
+
+    if (noVerify) {
+      pushArgs.push("--no-verify");
+    }
+
+    // Set up output handler by using spawn directly
+    const gitProcess = spawn("git", ["push", ...pushArgs], {
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+
+    return new Promise((resolve, reject) => {
+      gitProcess.on("close", (code) => {
+        if (code === 0) {
+          log.success(`Successfully pushed to ${remote}/${targetUpstream}`);
+          resolve();
+        } else {
+          const error = new Error(`Push failed with exit code ${code}`);
+          log.error(`Failed to push to remote: ${error}`);
+          reject(error);
+        }
+      });
+    });
   } catch (error) {
     log.error(`Failed to push to remote: ${error}`);
     throw new Error(`Push failed: ${error}`);
