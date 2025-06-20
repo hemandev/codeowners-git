@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.4.1
+
+### Patch Changes
+
+- 9294ca6: fix version command
+
 ## 1.4.0
 
 ### Minor Changes
