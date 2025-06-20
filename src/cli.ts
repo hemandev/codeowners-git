@@ -3,12 +3,14 @@ import { Command } from "commander";
 import { listCodeowners } from "./commands/list";
 import { branch } from "./commands/branch";
 import { multiBranch } from "./commands/multi-branch";
+import { getVersion } from "./commands/version";
 
 const program = new Command();
 
 program
   .name("codeowners")
-  .description("CLI tool for grouping and managing staged files by CODEOWNERS");
+  .description("CLI tool for grouping and managing staged files by CODEOWNERS")
+  .version(getVersion());
 
 program
   .command("list")

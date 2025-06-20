@@ -48,6 +48,18 @@ The tool automatically detects CODEOWNERS files in:
 
 ## Commands
 
+### `--version`
+
+Display the version of codeowners-git.
+
+Usage:
+
+```bash
+codeowners-git --version
+# or
+codeowners-git -V
+```
+
 ### `list`
 
 List current CODEOWNERS entries.
