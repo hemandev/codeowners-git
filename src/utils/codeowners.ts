@@ -1,10 +1,28 @@
 import Codeowners from "codeowners";
 import { getChangedFiles } from "./git";
 
-const codeowners = new Codeowners();
+type CodeOwnersFile = InstanceType<typeof Codeowners>;
+
+let codeowners: CodeOwnersFile;
+
+const getCodeownersInstance = (): CodeOwnersFile => {
+  if (!codeowners) {
+    try {
+      codeowners = new Codeowners();
+    } catch (error) {
+      // If no CODEOWNERS file is found, return a mock instance
+      // This allows the tool to work even without a CODEOWNERS file
+      return {
+        getOwner: () => [],
+      } as unknown as CodeOwnersFile;
+    }
+  }
+  return codeowners;
+};
 
 export const getOwner = (filePath: string): string[] => {
-  const owner = codeowners.getOwner(filePath);
+  const instance = getCodeownersInstance();
+  const owner = instance.getOwner(filePath);
   return owner;
 };
 

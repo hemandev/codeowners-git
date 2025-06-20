@@ -2,6 +2,7 @@ import { getChangedFiles } from "../utils/git";
 import { getOwner } from "../utils/codeowners";
 import { branch } from "./branch";
 import { log } from "../utils/logger";
+import micromatch from "micromatch";
 
 export type MultiBranchOptions = {
   branch?: string;
@@ -12,12 +13,20 @@ export type MultiBranchOptions = {
   upstream?: string;
   force?: boolean;
   keepBranchOnFailure?: boolean;
+  defaultOwner?: string;
+  ignore?: string;
+  include?: string;
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
   try {
     if (!options.branch || !options.message) {
       throw new Error("Missing required options for multi-branch creation");
+    }
+
+    // Validate that only one of ignore or include is used
+    if (options.ignore && options.include) {
+      throw new Error("Cannot use both --ignore and --include options at the same time");
     }
 
     log.info("Starting multi-branch creation process...");
@@ -38,13 +47,43 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       }
     }
 
-    const codeowners = Array.from(ownerSet);
+    let codeowners = Array.from(ownerSet);
 
     if (codeowners.length === 0) {
-      throw new Error("No codeowners found for the changed files");
+      log.warn("No codeowners found for the changed files");
+      
+      if (options.defaultOwner) {
+        log.info(`Using default owner: ${options.defaultOwner}`);
+        codeowners.push(options.defaultOwner);
+      } else {
+        log.info("Continuing without creating any branches (use --default-owner to specify a fallback)");
+        return;
+      }
+    } else {
+      log.info(`Found ${codeowners.length} codeowners: ${codeowners.join(", ")}`);
     }
 
-    log.info(`Found ${codeowners.length} codeowners: ${codeowners.join(", ")}`);
+    // Apply filtering if ignore or include options are provided
+    if (options.ignore || options.include) {
+      const originalCount = codeowners.length;
+      
+      if (options.ignore) {
+        const ignorePatterns = options.ignore.split(',').map(p => p.trim());
+        codeowners = codeowners.filter(owner => !micromatch.isMatch(owner, ignorePatterns));
+        log.info(`Filtered out ${originalCount - codeowners.length} codeowners using ignore patterns: ${ignorePatterns.join(", ")}`);
+      } else if (options.include) {
+        const includePatterns = options.include.split(',').map(p => p.trim());
+        codeowners = codeowners.filter(owner => micromatch.isMatch(owner, includePatterns));
+        log.info(`Filtered to ${codeowners.length} codeowners using include patterns: ${includePatterns.join(", ")}`);
+      }
+
+      if (codeowners.length === 0) {
+        log.warn("No codeowners left after filtering");
+        return;
+      }
+
+      log.info(`Processing ${codeowners.length} codeowners after filtering: ${codeowners.join(", ")}`);
+    }
 
     // Track success and failures
     const results = {

@@ -60,6 +60,18 @@ program
     "-k, --keep-branch-on-failure",
     "Keep created branches even if operation fails"
   )
+  .option(
+    "-d, --default-owner <defaultOwner>",
+    "Default owner to use when no codeowners are found for changed files"
+  )
+  .option(
+    "--ignore <patterns>",
+    "Comma-separated patterns to exclude codeowners (e.g., 'team-a,team-b')"
+  )
+  .option(
+    "--include <patterns>",
+    "Comma-separated patterns to include codeowners (e.g., 'team-*,@org/*')"
+  )
   .action(multiBranch);
 
 program.parse(process.argv);

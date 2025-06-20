@@ -4,11 +4,8 @@ import {
   commitChanges,
   checkout,
   pushBranch,
-  stashChanges,
-  applyStash,
   deleteBranch,
   branchExists,
-  getChangedFiles,
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
@@ -46,7 +43,8 @@ export const branch = async (options: BranchOptions) => {
     // First, identify the files owned by the specified owner
     filesToCommit = await getOwnerFiles(options.owner);
     if (filesToCommit.length <= 0) {
-      throw new Error(`No files found for ${options.owner}`);
+      log.warn(`No files found for ${options.owner}. Skipping branch creation.`);
+      return;
     }
 
     log.file(`Files to be committed:\n  ${filesToCommit.join("\n  ")}`);

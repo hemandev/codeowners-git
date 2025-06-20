@@ -33,6 +33,7 @@ export const log = {
   success: (message: string) => console.log(chalk.green(`✓ ${message}`)),
   error: (message: string) => console.error(chalk.red(`✗ ${message}`)),
   info: (message: string) => console.log(chalk.bold(`ℹ ${message}`)),
+  warn: (message: string) => console.warn(chalk.yellow(`⚠ ${message}`)),
   header: (message: string) => console.log(chalk.bold.cyan(`\n${message}`)),
   file: (path: string) => console.log(`- ${chalk.dim(path)}`),
   owner: (name: string) => chalk.magenta(name),

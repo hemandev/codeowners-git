@@ -12,6 +12,8 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Creating compact, team-specific branches with only their affected files.
 - Streamlining the review process with smaller, targeted PRs.
 
+> **Note:** This tool works with **unstaged files**. Make sure to check if your files are unstaged before proceeding.
+
 https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
 
 ## Installation
@@ -107,7 +109,7 @@ codeowners-git multi-branch [options]
 
 Options:
 
-- `--branch, -b` Base branch name (will be prefixed with codeowner name)
+- `--branch, -b` Base branch name (will be suffixed with codeowner name)
 - `--message, -m` Base commit message (will be suffixed with codeowner name)
 - `--no-verify, -n` Skips lint-staged and other checks before committing
 - `--push, -p` Push branches to remote after commit
@@ -115,18 +117,34 @@ Options:
 - `--upstream, -u` Upstream branch name pattern (defaults to local branch name)
 - `--force, -f` Force push to remote
 - `--keep-branch-on-failure, -k` Keep created branches even if operation fails
+- `--default-owner, -d` Default owner to use when no codeowners are found for changed files
+- `--ignore` Comma-separated patterns to exclude codeowners (e.g., 'team-a,team-b')
+- `--include` Comma-separated patterns to include codeowners (e.g., 'team-_,@org/_')
+
+> **Note:** You cannot use both `--ignore` and `--include` options at the same time.
 
 Example:
 
 ```bash
+# Create branches for all codeowners
 codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -p
+
+# Exclude specific teams
+codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "@ce-orca,@ce-ece"
+
+# Include only specific patterns
+codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" --include "@team-*"
+
+# Use default owner when no codeowners found
+codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
 ```
 
 This will:
 
-1. Find all codeowners for the changed files in your repository
-2. For each codeowner (e.g., @team-a, @team-b):
-   - Create a branch like `team-a/feature/new-feature`
+1. Find all codeowners for the staged files in your repository
+2. Apply any ignore/include filters if specified
+3. For each codeowner (e.g., @team-a, @team-b):
+   - Create a branch like `feature/new-feature/team-a`
    - Commit only the files owned by that team
    - Add a commit message like "Add new feature - @team-a"
    - Push each branch to the remote if the `-p` flag is provided
