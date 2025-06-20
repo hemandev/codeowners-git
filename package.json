@@ -1,6 +1,6 @@
 {
   "name": "codeowners-git",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "module": "src/cli.ts",
   "type": "module",
   "private": false,

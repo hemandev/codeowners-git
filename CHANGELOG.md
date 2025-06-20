@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.4.0
+
+### Minor Changes
+
+- 0291a67: Add --version command
+
 ## 1.3.0
 
 ### Minor Changes
