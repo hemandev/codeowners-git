@@ -5,7 +5,8 @@
   "type": "module",
   "private": false,
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "package.json"
   ],
   "publishConfig": {
     "access": "public"
