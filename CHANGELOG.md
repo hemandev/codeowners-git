@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.4.2
+
+### Patch Changes
+
+- ebfceed: fix: --defaultOwners not working correctly
+
 ## 1.4.1
 
 ### Patch Changes
