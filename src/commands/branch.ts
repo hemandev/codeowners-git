@@ -20,6 +20,7 @@ export type BranchOptions = {
   upstream?: string;
   force?: boolean;
   keepBranchOnFailure?: boolean;
+  isDefaultOwner?: boolean;
 };
 
 export const branch = async (options: BranchOptions) => {
@@ -41,7 +42,7 @@ export const branch = async (options: BranchOptions) => {
     log.info(`Currently on branch: ${originalBranch}`);
 
     // First, identify the files owned by the specified owner
-    filesToCommit = await getOwnerFiles(options.owner);
+    filesToCommit = await getOwnerFiles(options.owner, options.isDefaultOwner || false);
     if (filesToCommit.length <= 0) {
       log.warn(`No files found for ${options.owner}. Skipping branch creation.`);
       return;

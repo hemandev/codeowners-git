@@ -105,11 +105,11 @@ describe("multi-branch command", () => {
     });
 
     expect(
-      consoleWarns.some((msg) => msg.includes("No codeowners found"))
+      consoleOutput.some((msg) => msg.includes("Found 2 files without owners"))
     ).toBe(true);
     expect(
       consoleOutput.some((msg) =>
-        msg.includes("Using default owner: @default-team")
+        msg.includes("Adding default owner: @default-team")
       )
     ).toBe(true);
     expect(branchCallOptions).toBeTruthy();

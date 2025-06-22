@@ -26,11 +26,15 @@ export const getOwner = (filePath: string): string[] => {
   return owner;
 };
 
-export const getOwnerFiles = async (owner: string): Promise<string[]> => {
+export const getOwnerFiles = async (owner: string, includeUnowned: boolean = false): Promise<string[]> => {
   const changedFiles = await getChangedFiles();
 
   return changedFiles.filter((file) => {
     const owners = getOwner(file);
+    // If includeUnowned is true and the file has no owners, include it
+    if (includeUnowned && owners.length === 0) {
+      return true;
+    }
     return owners.includes(owner);
   });
 };

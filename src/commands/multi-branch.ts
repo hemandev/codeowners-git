@@ -40,25 +40,31 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
     // Extract all codeowners from the changed files
     const ownerSet = new Set<string>();
+    const filesWithoutOwners: string[] = [];
+    
     for (const file of changedFiles) {
       const owners = getOwner(file);
-      for (const owner of owners) {
-        ownerSet.add(owner);
+      if (owners.length === 0) {
+        filesWithoutOwners.push(file);
+      } else {
+        for (const owner of owners) {
+          ownerSet.add(owner);
+        }
       }
     }
 
     let codeowners = Array.from(ownerSet);
 
+    // If there are files without owners and a default owner is specified, add it
+    if (filesWithoutOwners.length > 0 && options.defaultOwner) {
+      log.info(`Found ${filesWithoutOwners.length} files without owners. Adding default owner: ${options.defaultOwner}`);
+      codeowners.push(options.defaultOwner);
+    }
+
     if (codeowners.length === 0) {
       log.warn("No codeowners found for the changed files");
-      
-      if (options.defaultOwner) {
-        log.info(`Using default owner: ${options.defaultOwner}`);
-        codeowners.push(options.defaultOwner);
-      } else {
-        log.info("Continuing without creating any branches (use --default-owner to specify a fallback)");
-        return;
-      }
+      log.info("Continuing without creating any branches (use --default-owner to specify a fallback)");
+      return;
     } else {
       log.info(`Found ${codeowners.length} codeowners: ${codeowners.join(", ")}`);
     }
@@ -118,6 +124,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
           upstream: options.upstream,
           force: options.force,
           keepBranchOnFailure: options.keepBranchOnFailure,
+          isDefaultOwner: owner === options.defaultOwner,
         });
 
         results.success.push(owner);
