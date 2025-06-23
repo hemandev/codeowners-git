@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.5.0
+
+### Minor Changes
+
+- 9be188f: - Add --append flag which allows reuse the same branch for further changes later
+
 ## 1.4.2
 
 ### Patch Changes
