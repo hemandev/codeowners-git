@@ -102,11 +102,16 @@ Options:
 - `--upstream, -u` Upstream branch name (defaults to local branch name)
 - `--force, -f` Force push to remote
 - `--keep-branch-on-failure, -k` Keep the created branch even if operation fails
+- `--append` Add commits to existing branch instead of creating a new one
 
 Example:
 
 ```bash
+# Create a new branch
 codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
+
+# Add more commits to the same branch later
+codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add more changes" --append -p
 ```
 
 ### `multi-branch`
@@ -132,6 +137,7 @@ Options:
 - `--default-owner, -d` Default owner to use when no codeowners are found for changed files
 - `--ignore` Comma-separated patterns to exclude codeowners (e.g., 'team-a,team-b')
 - `--include` Comma-separated patterns to include codeowners (e.g., 'team-_,@org/_')
+- `--append` Add commits to existing branches instead of creating new ones
 
 > **Note:** You cannot use both `--ignore` and `--include` options at the same time.
 
@@ -149,6 +155,9 @@ codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" --incl
 
 # Use default owner when no codeowners found
 codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
+
+# Add more commits to existing branches
+codeowners-git multi-branch -b "feature/new-feature" -m "Add more changes" --append -p
 ```
 
 This will:

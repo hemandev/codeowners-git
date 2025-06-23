@@ -37,6 +37,7 @@ program
     "-k, --keep-branch-on-failure",
     "Keep the created branch even if operation fails"
   )
+  .option("--append", "Add commits to existing branch instead of creating a new one")
   .action(branch);
 
 program
@@ -74,6 +75,7 @@ program
     "--include <patterns>",
     "Comma-separated patterns to include codeowners (e.g., 'team-*,@org/*')"
   )
+  .option("--append", "Add commits to existing branches instead of creating new ones")
   .action(multiBranch);
 
 program.parse(process.argv);

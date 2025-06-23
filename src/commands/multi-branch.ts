@@ -16,6 +16,7 @@ export type MultiBranchOptions = {
   defaultOwner?: string;
   ignore?: string;
   include?: string;
+  append?: boolean;
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
@@ -29,7 +30,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       throw new Error("Cannot use both --ignore and --include options at the same time");
     }
 
-    log.info("Starting multi-branch creation process...");
+    log.info(options.append ? "Starting multi-branch update process..." : "Starting multi-branch creation process...");
 
     // Get all changed files
     const changedFiles = await getChangedFiles();
@@ -111,9 +112,9 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         // Format commit message with owner
         const commitMessage = `${options.message} - ${owner}`;
 
-        log.info(`Creating branch for ${owner}...`);
+        log.info(options.append ? `Updating branch for ${owner}...` : `Creating branch for ${owner}...`);
 
-        // Create branch for this owner
+        // Create or update branch for this owner
         await branch({
           owner: owner,
           branch: branchName,
@@ -125,18 +126,21 @@ export const multiBranch = async (options: MultiBranchOptions) => {
           force: options.force,
           keepBranchOnFailure: options.keepBranchOnFailure,
           isDefaultOwner: owner === options.defaultOwner,
+          append: options.append,
         });
 
         results.success.push(owner);
       } catch (error) {
-        log.error(`Failed to create branch for ${owner}: ${error}`);
+        log.error(`Failed to ${options.append ? 'update' : 'create'} branch for ${owner}: ${error}`);
         results.failure.push(owner);
       }
     }
 
-    log.header("Multi-branch creation summary");
+    log.header(options.append ? "Multi-branch update summary" : "Multi-branch creation summary");
     log.info(
-      `Successfully created branches for ${results.success.length} of ${codeowners.length} codeowners`
+      options.append
+        ? `Successfully updated branches for ${results.success.length} of ${codeowners.length} codeowners`
+        : `Successfully created branches for ${results.success.length} of ${codeowners.length} codeowners`
     );
 
     if (results.success.length) {

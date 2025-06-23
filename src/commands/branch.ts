@@ -21,6 +21,7 @@ export type BranchOptions = {
   force?: boolean;
   keepBranchOnFailure?: boolean;
   isDefaultOwner?: boolean;
+  append?: boolean;
 };
 
 export const branch = async (options: BranchOptions) => {
@@ -35,7 +36,7 @@ export const branch = async (options: BranchOptions) => {
       throw new Error("Missing required options for branch creation");
     }
 
-    log.info("Starting branch creation process...");
+    log.info(options.append ? "Starting branch update process..." : "Starting branch creation process...");
 
     // Save current state
     originalBranch = await getCurrentBranch();
@@ -51,17 +52,25 @@ export const branch = async (options: BranchOptions) => {
     log.file(`Files to be committed:\n  ${filesToCommit.join("\n  ")}`);
 
     // Check if branch already exists
-    if (await branchExists(options.branch)) {
+    const branchAlreadyExists = await branchExists(options.branch);
+    
+    if (branchAlreadyExists && !options.append) {
       throw new Error(
-        `Branch "${options.branch}" already exists. Use a different name or delete the existing branch first.`
+        `Branch "${options.branch}" already exists. Use --append to add commits to it, or use a different name.`
       );
     }
 
     try {
-      // Create and switch to new branch
-      log.info(`Creating new branch "${options.branch}"...`);
-      await createBranch(options.branch);
-      newBranchCreated = true;
+      if (branchAlreadyExists && options.append) {
+        // Checkout existing branch
+        log.info(`Checking out existing branch "${options.branch}"...`);
+        await checkout(options.branch);
+      } else {
+        // Create and switch to new branch
+        log.info(`Creating new branch "${options.branch}"...`);
+        await createBranch(options.branch);
+        newBranchCreated = true;
+      }
 
       // Commit changes
       log.info(
@@ -88,11 +97,19 @@ export const branch = async (options: BranchOptions) => {
       log.info(`Checking out original branch "${originalBranch}"...`);
       await checkout(originalBranch);
 
-      log.success(
-        options.push
-          ? `Branch "${options.branch}" created, changes committed, and pushed to remote.`
-          : `Branch "${options.branch}" created and changes committed.`
-      );
+      if (branchAlreadyExists && options.append) {
+        log.success(
+          options.push
+            ? `Changes committed to existing branch "${options.branch}" and pushed to remote.`
+            : `Changes committed to existing branch "${options.branch}".`
+        );
+      } else {
+        log.success(
+          options.push
+            ? `Branch "${options.branch}" created, changes committed, and pushed to remote.`
+            : `Branch "${options.branch}" created and changes committed.`
+        );
+      }
     } catch (operationError) {
       // Handle operation errors with cleanup
       log.error(`Operation failed: ${operationError}`);
