@@ -32,7 +32,7 @@
     "build": "bun build src/cli.ts --compile --outfile bin/codeowners-git",
     "build:dist": "bun build src/cli.ts --outdir dist/ --target node",
     "test": "bun test --watch",
-    "test:unit": "bun test --ignore='**/e2e/**'",
+    "test:unit": "bun test src/**",
     "test:e2e": "bun test test/e2e",
     "test:e2e:local": "TEST_REPO_URL=../cg-test bun test test/e2e",
     "test:all": "bun run test:unit && bun run test:e2e",
