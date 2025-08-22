@@ -76,9 +76,8 @@ export const createPullRequest = async (
   // Build gh command arguments
   const args = ["pr", "create", "--title", title];
 
-  if (body) {
-    args.push("--body", body);
-  }
+  // Always include --body to avoid GitHub CLI interactive mode
+  args.push("--body", body || "");
 
   if (draft) {
     args.push("--draft");
