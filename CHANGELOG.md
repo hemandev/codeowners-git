@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 1.7.0
+
+### Minor Changes
+
+- 598ce89: fix --draft-pr when body is empty
+
 ## 1.6.0
 
 ### Minor Changes
