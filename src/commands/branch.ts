@@ -6,9 +6,11 @@ import {
   pushBranch,
   deleteBranch,
   branchExists,
+  getDefaultBranch,
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
+import { createPRWithTemplate } from "../utils/github";
 
 export type BranchOptions = {
   owner?: string;
@@ -22,6 +24,8 @@ export type BranchOptions = {
   keepBranchOnFailure?: boolean;
   isDefaultOwner?: boolean;
   append?: boolean;
+  pr?: boolean;
+  draftPr?: boolean;
 };
 
 export const branch = async (options: BranchOptions) => {
@@ -34,6 +38,15 @@ export const branch = async (options: BranchOptions) => {
   try {
     if (!options.branch || !options.message || !options.owner) {
       throw new Error("Missing required options for branch creation");
+    }
+
+    // Validate PR options
+    if ((options.pr || options.draftPr) && !options.push) {
+      throw new Error("Pull request creation requires --push option");
+    }
+
+    if (options.pr && options.draftPr) {
+      throw new Error("Cannot use both --pr and --draft-pr options");
     }
 
     log.info(options.append ? "Starting branch update process..." : "Starting branch creation process...");
@@ -91,6 +104,28 @@ export const branch = async (options: BranchOptions) => {
           force: options.force,
           noVerify: !options.verify,
         });
+      }
+
+      // Create PR if requested
+      if ((options.pr || options.draftPr) && options.push) {
+        try {
+          const defaultBranch = await getDefaultBranch();
+          const prResult = await createPRWithTemplate(
+            options.message,
+            options.branch,
+            {
+              draft: options.draftPr,
+              base: defaultBranch,
+            }
+          );
+          
+          if (prResult) {
+            log.success(`${options.draftPr ? "Draft " : ""}Pull request #${prResult.number} created: ${prResult.url}`);
+          }
+        } catch (prError) {
+          log.error(`Failed to create pull request: ${prError}`);
+          log.info("Branch was successfully created and pushed, but PR creation failed");
+        }
       }
 
       // Success path - return to original branch

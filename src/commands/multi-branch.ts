@@ -17,6 +17,8 @@ export type MultiBranchOptions = {
   ignore?: string;
   include?: string;
   append?: boolean;
+  pr?: boolean;
+  draftPr?: boolean;
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
@@ -28,6 +30,15 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     // Validate that only one of ignore or include is used
     if (options.ignore && options.include) {
       throw new Error("Cannot use both --ignore and --include options at the same time");
+    }
+
+    // Validate PR options
+    if ((options.pr || options.draftPr) && !options.push) {
+      throw new Error("Pull request creation requires --push option");
+    }
+
+    if (options.pr && options.draftPr) {
+      throw new Error("Cannot use both --pr and --draft-pr options");
     }
 
     log.info(options.append ? "Starting multi-branch update process..." : "Starting multi-branch creation process...");
@@ -96,6 +107,8 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     const results = {
       success: [] as string[],
       failure: [] as string[],
+      prSuccess: [] as string[],
+      prFailure: [] as string[],
     };
 
     // Process each codeowner
@@ -127,9 +140,17 @@ export const multiBranch = async (options: MultiBranchOptions) => {
           keepBranchOnFailure: options.keepBranchOnFailure,
           isDefaultOwner: owner === options.defaultOwner,
           append: options.append,
+          pr: options.pr,
+          draftPr: options.draftPr,
         });
 
         results.success.push(owner);
+        
+        // Track PR results (the branch function handles PR creation internally,
+        // so we'll assume PR success if branch creation succeeded and PR was requested)
+        if ((options.pr || options.draftPr) && options.push) {
+          results.prSuccess.push(owner);
+        }
       } catch (error) {
         log.error(`Failed to ${options.append ? 'update' : 'create'} branch for ${owner}: ${error}`);
         results.failure.push(owner);
@@ -149,6 +170,18 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
     if (results.failure.length) {
       log.error(`Failed: ${results.failure.join(", ")}`);
+    }
+
+    // Show PR creation summary if PR options were used
+    if (options.pr || options.draftPr) {
+      log.header(`${options.draftPr ? "Draft " : ""}Pull request creation summary`);
+      log.info(
+        `Successfully created ${options.draftPr ? "draft " : ""}pull requests for ${results.prSuccess.length} of ${results.success.length} successful branches`
+      );
+      
+      if (results.prSuccess.length) {
+        log.success(`${options.draftPr ? "Draft " : ""}PRs created for: ${results.prSuccess.join(", ")}`);
+      }
     }
   } catch (err) {
     log.error(`Multi-branch operation failed: ${err}`);

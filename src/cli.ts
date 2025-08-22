@@ -8,7 +8,7 @@ import { getVersion } from "./commands/version";
 const program = new Command();
 
 program
-  .name("codeowners")
+  .name("codeowners-git (cg)")
   .description("CLI tool for grouping and managing staged files by CODEOWNERS")
   .version(getVersion());
 
@@ -37,7 +37,15 @@ program
     "-k, --keep-branch-on-failure",
     "Keep the created branch even if operation fails"
   )
-  .option("--append", "Add commits to existing branch instead of creating a new one")
+  .option(
+    "--append",
+    "Add commits to existing branch instead of creating a new one"
+  )
+  .option("--pr", "Create a pull request after pushing (requires --push)")
+  .option(
+    "--draft-pr",
+    "Create a draft pull request after pushing (requires --push)"
+  )
   .action(branch);
 
 program
@@ -75,7 +83,15 @@ program
     "--include <patterns>",
     "Comma-separated patterns to include codeowners (e.g., 'team-*,@org/*')"
   )
-  .option("--append", "Add commits to existing branches instead of creating new ones")
+  .option(
+    "--append",
+    "Add commits to existing branches instead of creating new ones"
+  )
+  .option("--pr", "Create pull requests after pushing (requires --push)")
+  .option(
+    "--draft-pr",
+    "Create draft pull requests after pushing (requires --push)"
+  )
   .action(multiBranch);
 
 program.parse(process.argv);

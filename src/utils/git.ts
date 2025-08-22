@@ -227,3 +227,41 @@ export const pushBranch = async (
     throw new Error(`Push failed: ${error}`);
   }
 };
+
+/**
+ * Check if a branch has a remote tracking branch
+ */
+export const hasRemoteTracking = async (branchName: string): Promise<boolean> => {
+  try {
+    const result = await git.raw(['config', '--get', `branch.${branchName}.remote`]);
+    return result.trim().length > 0;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Get the default branch of the repository
+ */
+export const getDefaultBranch = async (): Promise<string> => {
+  try {
+    // Try to get the default branch from remote
+    const result = await git.raw(['symbolic-ref', 'refs/remotes/origin/HEAD']);
+    const match = result.match(/refs\/remotes\/origin\/(.+)/);
+    if (match) {
+      return match[1].trim();
+    }
+  } catch {
+    // Fallback to common default branch names
+    const branches = await git.branch(['-r']);
+    if (branches.all.includes('origin/main')) {
+      return 'main';
+    }
+    if (branches.all.includes('origin/master')) {
+      return 'master';
+    }
+  }
+  
+  // Final fallback
+  return 'main';
+};

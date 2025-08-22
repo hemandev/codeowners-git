@@ -21,6 +21,14 @@ jobs:
         run: |
           bun install
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          bun test
+          bun run test:unit
+
+      - name: Build binary for e2e tests
+        run: |
+          bun run build
+
+      - name: Run e2e tests
+        run: |
+          bun run test:e2e

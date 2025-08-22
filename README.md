@@ -6,7 +6,7 @@
 
 Managing large-scale migrations in big monorepos with multiple codeowners can be overwhelming. Massive PRs touching thousands of files make it hard for teams to review changes efficiently.
 
-`codeowners-git` solves this by:
+`codeowners-git` (or `cg` for short) solves this by:
 
 - Identifying files owned by specific teams using the CODEOWNERS file.
 - Creating compact, team-specific branches with only their affected files.
@@ -24,6 +24,8 @@ Run commands directly without installation:
 
 ```bash
 npx codeowners-git <command>
+# or use the short alias
+npx cg <command>
 ```
 
 ### Install globally via npm
@@ -36,6 +38,8 @@ Then run commands directly:
 
 ```bash
 codeowners-git <command>
+# or use the short alias
+cg <command>
 ```
 
 ## Configuration
@@ -45,6 +49,29 @@ The tool automatically detects CODEOWNERS files in:
 1. `.github/CODEOWNERS`
 2. `docs/CODEOWNERS`
 3. `CODEOWNERS` (root directory)
+
+### Pull Request Features
+
+The `--pr` and `--draft-pr` options require the [GitHub CLI (`gh`)](https://cli.github.com/) to be installed and authenticated:
+
+```bash
+# Install GitHub CLI (macOS)
+brew install gh
+
+# Install GitHub CLI (Windows)
+winget install --id GitHub.cli
+
+# Install GitHub CLI (Linux)
+sudo apt install gh
+
+# Authenticate with GitHub
+gh auth login
+```
+
+The tool will automatically:
+- Use PR templates if they exist in your repository (`.github/pull_request_template.md`, etc.)
+- Set the PR title to your commit message
+- Create PRs against the repository's default branch
 
 ## Commands
 
@@ -58,6 +85,8 @@ Usage:
 codeowners-git --version
 # or
 codeowners-git -V
+# or using the short alias
+cg --version
 ```
 
 ### `list`
@@ -68,6 +97,8 @@ Usage:
 
 ```bash
 codeowners-git list [options]
+# or
+cg list [options]
 ```
 
 Options:
@@ -79,6 +110,8 @@ Example:
 
 ```bash
 codeowners-git list -o @myteam
+# or
+cg list -o @myteam
 ```
 
 ### `branch`
@@ -89,6 +122,8 @@ Usage:
 
 ```bash
 codeowners-git branch [options]
+# or
+cg branch [options]
 ```
 
 Options:
@@ -103,15 +138,25 @@ Options:
 - `--force, -f` Force push to remote
 - `--keep-branch-on-failure, -k` Keep the created branch even if operation fails
 - `--append` Add commits to existing branch instead of creating a new one
+- `--pr` Create a pull request after pushing (requires `--push` and GitHub CLI)
+- `--draft-pr` Create a draft pull request after pushing (requires `--push` and GitHub CLI)
 
 Example:
 
 ```bash
 # Create a new branch
 codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
+# or
+cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
+
+# Create a branch and automatically create a pull request
+cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --pr
+
+# Create a branch and automatically create a draft pull request
+cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --draft-pr
 
 # Add more commits to the same branch later
-codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add more changes" --append -p
+cg branch -o @myteam -b "feature/new-feature" -m "Add more changes" --append -p
 ```
 
 ### `multi-branch`
@@ -122,6 +167,8 @@ Usage:
 
 ```bash
 codeowners-git multi-branch [options]
+# or
+cg multi-branch [options]
 ```
 
 Options:
@@ -138,6 +185,8 @@ Options:
 - `--ignore` Comma-separated patterns to exclude codeowners (e.g., 'team-a,team-b')
 - `--include` Comma-separated patterns to include codeowners (e.g., 'team-_,@org/_')
 - `--append` Add commits to existing branches instead of creating new ones
+- `--pr` Create pull requests after pushing (requires `--push` and GitHub CLI)
+- `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
 
 > **Note:** You cannot use both `--ignore` and `--include` options at the same time.
 
@@ -146,18 +195,26 @@ Example:
 ```bash
 # Create branches for all codeowners
 codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -p
+# or
+cg multi-branch -b "feature/new-feature" -m "Add new feature" -p
+
+# Create branches and automatically create pull requests for each
+cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --pr
+
+# Create branches and automatically create draft pull requests for each
+cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --draft-pr
 
 # Exclude specific teams
-codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "@ce-orca,@ce-ece"
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "@ce-orca,@ce-ece"
 
 # Include only specific patterns
-codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" --include "@team-*"
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --include "@team-*"
 
 # Use default owner when no codeowners found
-codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
+cg multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
 
 # Add more commits to existing branches
-codeowners-git multi-branch -b "feature/new-feature" -m "Add more changes" --append -p
+cg multi-branch -b "feature/new-feature" -m "Add more changes" --append -p
 ```
 
 This will:

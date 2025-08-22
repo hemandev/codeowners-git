@@ -32,13 +32,19 @@
     "build": "bun build src/cli.ts --compile --outfile bin/codeowners-git",
     "build:dist": "bun build src/cli.ts --outdir dist/ --target node",
     "test": "bun test --watch",
-    "test:ci": "bun test --watch",
+    "test:unit": "bun test --ignore='**/e2e/**'",
+    "test:e2e": "bun test test/e2e",
+    "test:e2e:local": "TEST_REPO_URL=../cg-test bun test test/e2e",
+    "test:all": "bun run test:unit && bun run test:e2e",
+    "test:ci": "bun run test:all",
+    "type-check": "bun tsc",
     "format": "biome format --write ./src",
     "lint": "biome lint ./src",
-    "prepublish": "bun run build:dist && bun test"
+    "prepublish": "bun run build:dist && bun run test:all"
   },
   "bin": {
-    "codeowners-git": "dist/cli.js"
+    "codeowners-git": "dist/cli.js",
+    "cg": "dist/cli.js"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
