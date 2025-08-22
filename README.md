@@ -24,8 +24,6 @@ Run commands directly without installation:
 
 ```bash
 npx codeowners-git <command>
-# or use the short alias
-npx cg <command>
 ```
 
 ### Install globally via npm
@@ -69,6 +67,7 @@ gh auth login
 ```
 
 The tool will automatically:
+
 - Use PR templates if they exist in your repository (`.github/pull_request_template.md`, etc.)
 - Set the PR title to your commit message
 - Create PRs against the repository's default branch
