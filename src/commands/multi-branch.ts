@@ -1,8 +1,14 @@
-import { getChangedFiles } from "../utils/git";
+import { getChangedFiles, getCurrentBranch } from "../utils/git";
 import { getOwner } from "../utils/codeowners";
 import { branch } from "./branch";
 import { log } from "../utils/logger";
 import micromatch from "micromatch";
+import {
+  createOperationState,
+  completeOperation,
+  failOperation,
+  type OperationStateData,
+} from "../utils/state";
 
 export type MultiBranchOptions = {
   branch?: string;
@@ -22,6 +28,8 @@ export type MultiBranchOptions = {
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
+  let operationState: OperationStateData | null = null;
+
   try {
     if (!options.branch || !options.message) {
       throw new Error("Missing required options for multi-branch creation");
@@ -42,6 +50,19 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     }
 
     log.info(options.append ? "Starting multi-branch update process..." : "Starting multi-branch creation process...");
+
+    // Create operation state
+    const originalBranch = await getCurrentBranch();
+    operationState = createOperationState("multi-branch", originalBranch, {
+      verify: options.verify,
+      push: options.push,
+      remote: options.remote,
+      force: options.force,
+      keepBranchOnFailure: options.keepBranchOnFailure,
+      pr: options.pr,
+      draftPr: options.draftPr,
+    });
+    log.info(`Operation ID: ${operationState.id}`);
 
     // Get all changed files
     const changedFiles = await getChangedFiles();
@@ -142,6 +163,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
           append: options.append,
           pr: options.pr,
           draftPr: options.draftPr,
+          operationState: operationState || undefined, // Pass operation state
         });
 
         results.success.push(owner);
@@ -178,13 +200,28 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       log.info(
         `Successfully created ${options.draftPr ? "draft " : ""}pull requests for ${results.prSuccess.length} of ${results.success.length} successful branches`
       );
-      
+
       if (results.prSuccess.length) {
         log.success(`${options.draftPr ? "Draft " : ""}PRs created for: ${results.prSuccess.join(", ")}`);
       }
     }
+
+    // Mark operation as complete
+    if (operationState) {
+      completeOperation(operationState.id, true); // Delete state file on success
+    }
   } catch (err) {
     log.error(`Multi-branch operation failed: ${err}`);
+
+    // Mark operation as failed
+    if (operationState) {
+      failOperation(operationState.id, String(err));
+      log.info("\nRecovery options:");
+      log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`);
+      log.info(`  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`);
+      log.info(`  3. Run 'codeowners-git recover --list' to see all incomplete operations`);
+    }
+
     process.exit(1);
   }
 };

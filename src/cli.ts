@@ -3,7 +3,12 @@ import { Command } from "commander";
 import { listCodeowners } from "./commands/list";
 import { branch } from "./commands/branch";
 import { multiBranch } from "./commands/multi-branch";
+import { recover } from "./commands/recover";
 import { getVersion } from "./commands/version";
+import { setupSignalHandlers } from "./utils/signals";
+
+// Setup signal handlers for graceful shutdown
+setupSignalHandlers();
 
 const program = new Command();
 
@@ -93,5 +98,14 @@ program
     "Create draft pull requests after pushing (requires --push)"
   )
   .action(multiBranch);
+
+program
+  .command("recover")
+  .description("Recover from failed or incomplete operations")
+  .option("--id <operationId>", "Specific operation ID to recover")
+  .option("--keep-branches", "Keep created branches instead of deleting them")
+  .option("--list", "List all incomplete operations")
+  .option("--auto", "Automatically recover most recent operation without prompts")
+  .action(recover);
 
 program.parse(process.argv);

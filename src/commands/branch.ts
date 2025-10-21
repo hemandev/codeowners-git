@@ -11,6 +11,14 @@ import {
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
 import { createPRWithTemplate } from "../utils/github";
+import {
+  createOperationState,
+  updateOperationState,
+  updateBranchState,
+  completeOperation,
+  failOperation,
+  type OperationStateData,
+} from "../utils/state";
 
 export type BranchOptions = {
   owner?: string;
@@ -26,6 +34,7 @@ export type BranchOptions = {
   append?: boolean;
   pr?: boolean;
   draftPr?: boolean;
+  operationState?: OperationStateData; // For multi-branch operations
 };
 
 export const branch = async (options: BranchOptions) => {
@@ -34,6 +43,8 @@ export const branch = async (options: BranchOptions) => {
   let stashId: string | null = null;
   let newBranchCreated = false;
   let filesToCommit: string[] = [];
+  let operationState: OperationStateData | null = options.operationState || null;
+  const isSubOperation = !!options.operationState; // True if called from multi-branch
 
   try {
     if (!options.branch || !options.message || !options.owner) {
@@ -55,6 +66,20 @@ export const branch = async (options: BranchOptions) => {
     originalBranch = await getCurrentBranch();
     log.info(`Currently on branch: ${originalBranch}`);
 
+    // Create operation state if not a sub-operation
+    if (!isSubOperation) {
+      operationState = createOperationState("branch", originalBranch, {
+        verify: options.verify,
+        push: options.push,
+        remote: options.remote,
+        force: options.force,
+        keepBranchOnFailure: options.keepBranchOnFailure,
+        pr: options.pr,
+        draftPr: options.draftPr,
+      });
+      log.info(`Operation ID: ${operationState.id}`);
+    }
+
     // First, identify the files owned by the specified owner
     filesToCommit = await getOwnerFiles(options.owner, options.isDefaultOwner || false);
     if (filesToCommit.length <= 0) {
@@ -74,6 +99,20 @@ export const branch = async (options: BranchOptions) => {
     }
 
     try {
+      // Update state: creating branch
+      if (operationState) {
+        updateOperationState(operationState.id, { currentState: "creating-branch" });
+        updateBranchState(operationState.id, options.branch, {
+          name: options.branch,
+          owner: options.owner || "",
+          files: filesToCommit,
+          created: false,
+          committed: false,
+          pushed: false,
+          prCreated: false,
+        });
+      }
+
       if (branchAlreadyExists && options.append) {
         // Checkout existing branch
         log.info(`Checking out existing branch "${options.branch}"...`);
@@ -83,9 +122,18 @@ export const branch = async (options: BranchOptions) => {
         log.info(`Creating new branch "${options.branch}"...`);
         await createBranch(options.branch);
         newBranchCreated = true;
+
+        // Update state: branch created
+        if (operationState) {
+          updateBranchState(operationState.id, options.branch, { created: true });
+        }
       }
 
       // Commit changes
+      if (operationState) {
+        updateOperationState(operationState.id, { currentState: "committing" });
+      }
+
       log.info(
         `Committing changes with message: "${options.message}" ${
           !options.verify ? "(no-verify)" : ""
@@ -96,19 +144,37 @@ export const branch = async (options: BranchOptions) => {
         noVerify: !options.verify,
       });
 
+      // Update state: committed
+      if (operationState) {
+        updateBranchState(operationState.id, options.branch, { committed: true });
+      }
+
       // Push if requested
       if (options.push) {
+        if (operationState) {
+          updateOperationState(operationState.id, { currentState: "pushing" });
+        }
+
         await pushBranch(options.branch, {
           remote: options.remote,
           upstream: options.upstream,
           force: options.force,
           noVerify: !options.verify,
         });
+
+        // Update state: pushed
+        if (operationState) {
+          updateBranchState(operationState.id, options.branch, { pushed: true });
+        }
       }
 
       // Create PR if requested
       if ((options.pr || options.draftPr) && options.push) {
         try {
+          if (operationState) {
+            updateOperationState(operationState.id, { currentState: "creating-pr" });
+          }
+
           const defaultBranch = await getDefaultBranch();
           const prResult = await createPRWithTemplate(
             options.message,
@@ -118,19 +184,36 @@ export const branch = async (options: BranchOptions) => {
               base: defaultBranch,
             }
           );
-          
+
           if (prResult) {
             log.success(`${options.draftPr ? "Draft " : ""}Pull request #${prResult.number} created: ${prResult.url}`);
+
+            // Update state: PR created
+            if (operationState) {
+              updateBranchState(operationState.id, options.branch, { prCreated: true });
+            }
           }
         } catch (prError) {
           log.error(`Failed to create pull request: ${prError}`);
           log.info("Branch was successfully created and pushed, but PR creation failed");
+
+          // Update state: PR creation failed (but don't fail the whole operation)
+          if (operationState) {
+            updateBranchState(operationState.id, options.branch, {
+              error: `PR creation failed: ${prError}`,
+            });
+          }
         }
       }
 
       // Success path - return to original branch
       log.info(`Checking out original branch "${originalBranch}"...`);
       await checkout(originalBranch);
+
+      // Mark operation as complete
+      if (operationState && !isSubOperation) {
+        completeOperation(operationState.id, true); // Delete state file on success
+      }
 
       if (branchAlreadyExists && options.append) {
         log.success(
@@ -148,6 +231,11 @@ export const branch = async (options: BranchOptions) => {
     } catch (operationError) {
       // Handle operation errors with cleanup
       log.error(`Operation failed: ${operationError}`);
+
+      // Mark operation as failed
+      if (operationState && !isSubOperation) {
+        failOperation(operationState.id, String(operationError));
+      }
 
       // Return to original branch if we changed branches
       if (newBranchCreated) {
@@ -173,6 +261,15 @@ export const branch = async (options: BranchOptions) => {
     }
   } catch (err) {
     log.error(`Branch operation failed: ${err}`);
+
+    // Provide recovery instructions for standalone operations
+    if (!isSubOperation && operationState) {
+      log.info("\nRecovery options:");
+      log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`);
+      log.info(`  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`);
+      log.info(`  3. Run 'codeowners-git recover --list' to see all incomplete operations`);
+    }
+
     process.exit(1);
   } finally {
     // Final cleanup - ensure we're back on the original branch with stashed changes restored
