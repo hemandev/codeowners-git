@@ -275,7 +275,7 @@ cg recover --id abc12345-6789-... --keep-branches
 
 **How it works:**
 
-Every `branch` and `multi-branch` operation is tracked with a unique UUID in `.codeowners-git/state/`. If an operation fails, you'll see recovery instructions:
+Every `branch` and `multi-branch` operation is tracked with a unique UUID in your home directory (`~/.codeowners-git/state/`). If an operation fails, you'll see recovery instructions:
 
 ```bash
 ✗ Operation failed: Push failed with exit code 128
@@ -292,7 +292,7 @@ The tool automatically handles:
 - Detailed operation tracking (branch creation, commits, pushes, PR creation)
 - Clean recovery to original state
 
-> **Note:** The `.codeowners-git/` directory is automatically added to `.gitignore` to prevent committing state files.
+> **Note:** State files are stored in `~/.codeowners-git/state/` outside your project directory, so no `.gitignore` entries are needed.
 
 ## Contributing
 

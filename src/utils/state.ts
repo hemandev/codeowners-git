@@ -1,10 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync } from "fs";
 import { join } from "path";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
+import { homedir } from "os";
 import { log } from "./logger";
-
-const STATE_DIR = ".codeowners-git";
-const STATE_SUBDIR = "state";
 
 export type OperationState = "initializing" | "creating-branch" | "committing" | "pushing" | "creating-pr" | "complete" | "failed";
 
@@ -38,10 +36,20 @@ export type OperationStateData = {
 };
 
 /**
+ * Get a unique identifier for the current project based on its path
+ */
+const getProjectHash = (): string => {
+  const projectPath = process.cwd();
+  return createHash("md5").update(projectPath).digest("hex").substring(0, 12);
+};
+
+/**
  * Get the path to the state directory
+ * Stores state in ~/.codeowners-git/state/<project-hash>/
  */
 export const getStateDir = (): string => {
-  return join(process.cwd(), STATE_DIR, STATE_SUBDIR);
+  const projectHash = getProjectHash();
+  return join(homedir(), ".codeowners-git", "state", projectHash);
 };
 
 /**
@@ -49,20 +57,9 @@ export const getStateDir = (): string => {
  */
 export const ensureStateDir = (): void => {
   const stateDir = getStateDir();
-  const parentDir = join(process.cwd(), STATE_DIR);
-
-  if (!existsSync(parentDir)) {
-    mkdirSync(parentDir, { recursive: true });
-  }
 
   if (!existsSync(stateDir)) {
     mkdirSync(stateDir, { recursive: true });
-  }
-
-  // Create .gitignore in the parent directory to avoid committing state files
-  const gitignorePath = join(parentDir, ".gitignore");
-  if (!existsSync(gitignorePath)) {
-    writeFileSync(gitignorePath, "# Ignore state files\nstate/\n", "utf-8");
   }
 };
 

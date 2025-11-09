@@ -7,7 +7,7 @@ Add graceful error handling with state tracking and recovery
 This release introduces a comprehensive error handling system that prevents users from being stuck in a limbo state when operations fail:
 
 **New Features:**
-- **State Tracking**: Every operation is tracked with a unique UUID in `.codeowners-git/state/` directory
+- **State Tracking**: Every operation is tracked with a unique UUID in `~/.codeowners-git/state/` (user's home directory)
 - **Recovery Command**: New `recover` command to clean up and return to original state after failures
   - `recover --list`: List all incomplete operations
   - `recover --auto`: Automatically recover most recent operation
