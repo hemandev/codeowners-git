@@ -9,6 +9,7 @@ import {
   getDefaultBranch,
   hasStagedChanges,
   getStagedFiles,
+  restoreFilesFromBranch,
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
@@ -44,6 +45,7 @@ export const branch = async (options: BranchOptions) => {
   let originalBranch = "";
   let stashId: string | null = null;
   let newBranchCreated = false;
+  let commitSucceeded = false;
   let filesToCommit: string[] = [];
   let operationState: OperationStateData | null = options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
@@ -158,6 +160,7 @@ export const branch = async (options: BranchOptions) => {
         message: options.message ?? "",
         noVerify: !options.verify,
       });
+      commitSucceeded = true;
 
       // Update state: committed
       if (operationState) {
@@ -258,14 +261,41 @@ export const branch = async (options: BranchOptions) => {
           log.info(`Returning to original branch "${originalBranch}"...`);
           await checkout(originalBranch);
 
-          // Delete the new branch unless explicitly requested to keep it
-          if (!options.keepBranchOnFailure) {
-            log.info(`Cleaning up: Deleting branch "${options.branch}"...`);
-            await deleteBranch(options.branch, true);
+          // If commit succeeded, files are in the branch
+          // We should restore them before deleting the branch to prevent data loss
+          if (commitSucceeded) {
+            log.warn(`Commit succeeded but subsequent operation failed.`);
+            log.info(`Restoring files from branch "${options.branch}" to prevent data loss...`);
+
+            try {
+              await restoreFilesFromBranch(options.branch, filesToCommit);
+            } catch (restoreError) {
+              log.error(`Failed to restore files: ${restoreError}`);
+              log.warn(`Files are still in branch "${options.branch}"`);
+              log.info(`To recover files manually, run:`);
+              log.info(`  git checkout ${options.branch} -- <file>`);
+              // Don't delete branch if restore failed
+              log.info(`Branch "${options.branch}" was kept to preserve your changes.`);
+              throw operationError;
+            }
+
+            // After successfully restoring files, decide whether to delete branch
+            if (!options.keepBranchOnFailure) {
+              log.info(`Cleaning up: Deleting branch "${options.branch}"...`);
+              await deleteBranch(options.branch, true);
+              log.info(`Files have been restored to your working directory.`);
+            } else {
+              log.info(`Branch "${options.branch}" was kept despite the failure.`);
+              log.info(`Files have been restored to your working directory.`);
+            }
           } else {
-            log.info(
-              `Branch "${options.branch}" was kept despite the failure.`
-            );
+            // Commit didn't succeed, safe to delete branch without restoring
+            if (!options.keepBranchOnFailure) {
+              log.info(`Cleaning up: Deleting branch "${options.branch}"...`);
+              await deleteBranch(options.branch, true);
+            } else {
+              log.info(`Branch "${options.branch}" was kept despite the failure.`);
+            }
           }
         } catch (cleanupError) {
           log.error(`Error during cleanup: ${cleanupError}`);

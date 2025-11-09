@@ -136,6 +136,43 @@ export const createBranch = async (branchName: string): Promise<void> => {
   }
 };
 
+/**
+ * Restore files from a specific branch to working directory
+ * This is useful when we need to recover files before deleting a branch
+ */
+export const restoreFilesFromBranch = async (
+  branchName: string,
+  files: string[]
+): Promise<void> => {
+  if (files.length === 0) return;
+
+  try {
+    log.info(`Restoring ${files.length} file(s) from branch "${branchName}"...`);
+
+    // Use git checkout to get file contents from the branch
+    // This stages the files, so we'll need to unstage them after
+    for (const file of files) {
+      try {
+        await git.raw(["checkout", branchName, "--", file]);
+      } catch (error) {
+        log.warn(`Could not restore ${file}: ${error}`);
+      }
+    }
+
+    // Unstage the restored files to return them to unstaged state
+    try {
+      await git.raw(["restore", "--staged", ...files]);
+    } catch (error) {
+      log.warn(`Files were restored but could not be unstaged: ${error}`);
+      log.info(`Run 'git restore --staged .' to unstage them`);
+    }
+
+    log.success(`Files restored to working directory`);
+  } catch (error) {
+    throw new Error(`Failed to restore files from branch: ${error}`);
+  }
+};
+
 export const deleteBranch = async (
   branchName: string,
   force = false
