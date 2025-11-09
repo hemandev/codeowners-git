@@ -321,7 +321,110 @@ export const getDefaultBranch = async (): Promise<string> => {
       return 'master';
     }
   }
-  
+
   // Final fallback
   return 'main';
+};
+
+/**
+ * Get the base branch where a source branch diverged from
+ * Uses git merge-base to find common ancestor with candidate bases
+ */
+export const getBaseBranch = async (
+  sourceBranch: string,
+  candidateBases: string[] = ['main', 'master', 'develop']
+): Promise<string> => {
+  // First try to detect default branch
+  const defaultBranch = await getDefaultBranch();
+
+  // Add default branch to candidates if not already there
+  if (!candidateBases.includes(defaultBranch)) {
+    candidateBases = [defaultBranch, ...candidateBases];
+  }
+
+  // Try each candidate base to find merge-base
+  for (const base of candidateBases) {
+    try {
+      // Check if base branch exists
+      const branches = await git.branch();
+      const allBranches = [...branches.all];
+
+      if (allBranches.includes(base) || allBranches.includes(`remotes/origin/${base}`)) {
+        // Try to get merge-base
+        await git.raw(['merge-base', sourceBranch, base]);
+        return base;
+      }
+    } catch {
+      // Continue to next candidate
+      continue;
+    }
+  }
+
+  // Fallback to default branch
+  return defaultBranch;
+};
+
+/**
+ * Get changed files between two git references (branches/commits)
+ * If target is not provided, compares source against its base branch
+ */
+export const getChangedFilesBetween = async (
+  source: string,
+  target?: string
+): Promise<string[]> => {
+  try {
+    let compareTarget = target;
+
+    // If no target provided, find the base branch
+    if (!compareTarget) {
+      compareTarget = await getBaseBranch(source);
+    }
+
+    // Get the merge-base (common ancestor)
+    const mergeBase = await git.raw(['merge-base', source, compareTarget]);
+    const baseCommit = mergeBase.trim();
+
+    // Get files changed between merge-base and source
+    const diff = await git.diff(['--name-only', `${baseCommit}..${source}`]);
+
+    if (!diff.trim()) {
+      return [];
+    }
+
+    return diff.trim().split('\n').filter(file => file.length > 0);
+  } catch (error) {
+    throw new Error(`Failed to get changed files between ${source} and ${target || 'base'}: ${error}`);
+  }
+};
+
+/**
+ * Extract files from a specific git reference to working directory (unstaged)
+ */
+export const extractFilesFromRef = async (
+  ref: string,
+  files: string[]
+): Promise<void> => {
+  try {
+    for (const file of files) {
+      try {
+        // Get file content from the ref
+        const content = await git.show([`${ref}:${file}`]);
+
+        // Write to working directory
+        const filePath = path.join(process.cwd(), file);
+        const dirPath = path.dirname(filePath);
+
+        // Ensure directory exists
+        await fs.mkdir(dirPath, { recursive: true });
+
+        // Write file
+        await fs.writeFile(filePath, content);
+      } catch (error) {
+        // File might have been deleted in the ref, skip it
+        log.warn(`Could not extract ${file} from ${ref}: ${error}`);
+      }
+    }
+  } catch (error) {
+    throw new Error(`Failed to extract files from ${ref}: ${error}`);
+  }
 };

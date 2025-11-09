@@ -407,7 +407,7 @@ describe.skip("E2E: branch command", () => {
           content: "export const ToDelete = () => <div>Delete me</div>;",
           operation: "add",
         },
-      ]);
+      ], true); // Stage for commit
 
       await helper.runGit(["commit", "-m", "Setup existing files"]);
 

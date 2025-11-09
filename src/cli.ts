@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { listCodeowners } from "./commands/list";
 import { branch } from "./commands/branch";
 import { multiBranch } from "./commands/multi-branch";
+import { extract } from "./commands/extract";
 import { recover } from "./commands/recover";
 import { getVersion } from "./commands/version";
 import { setupSignalHandlers } from "./utils/signals";
@@ -98,6 +99,20 @@ program
     "Create draft pull requests after pushing (requires --push)"
   )
   .action(multiBranch);
+
+program
+  .command("extract")
+  .description("Extract file changes from a branch or commit to working directory")
+  .requiredOption("-s, --source <source>", "Source branch or commit to extract from")
+  .option(
+    "-o, --owner <owner>",
+    "Filter extracted files by code owner (supports micromatch patterns)"
+  )
+  .option(
+    "--compare-main",
+    "Compare source against main branch instead of detecting merge-base"
+  )
+  .action(extract);
 
 program
   .command("recover")

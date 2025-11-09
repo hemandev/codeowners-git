@@ -61,7 +61,8 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
   let prUrl: string | undefined;
   let prNumber: number | undefined;
   let pushed = false;
-  let operationState: OperationStateData | null = options.operationState || null;
+  let operationState: OperationStateData | null =
+    options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
 
   try {
@@ -88,10 +89,16 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       log.info("  git restore --staged .");
       log.info("\nOr to unstage specific files:");
       log.info("  git restore --staged <file>");
-      throw new Error("Staged changes detected. Please unstage all changes before running this command.");
+      throw new Error(
+        "Staged changes detected. Please unstage all changes before running this command."
+      );
     }
 
-    log.info(options.append ? "Starting branch update process..." : "Starting branch creation process...");
+    log.info(
+      options.append
+        ? "Starting branch update process..."
+        : "Starting branch creation process..."
+    );
 
     // Save current state
     originalBranch = await getCurrentBranch();
@@ -112,9 +119,14 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     }
 
     // First, identify the files owned by the specified owner
-    filesToCommit = await getOwnerFiles(options.owner, options.isDefaultOwner || false);
+    filesToCommit = await getOwnerFiles(
+      options.owner,
+      options.isDefaultOwner || false
+    );
     if (filesToCommit.length <= 0) {
-      log.warn(`No files found for ${options.owner}. Skipping branch creation.`);
+      log.warn(
+        `No files found for ${options.owner}. Skipping branch creation.`
+      );
       return {
         success: false,
         branchName: options.branch,
@@ -129,7 +141,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
     // Check if branch already exists
     const branchAlreadyExists = await branchExists(options.branch);
-    
+
     if (branchAlreadyExists && !options.append) {
       throw new Error(
         `Branch "${options.branch}" already exists. Use --append to add commits to it, or use a different name.`
@@ -139,7 +151,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     try {
       // Update state: creating branch
       if (operationState) {
-        updateOperationState(operationState.id, { currentState: "creating-branch" });
+        updateOperationState(operationState.id, {
+          currentState: "creating-branch",
+        });
         updateBranchState(operationState.id, options.branch, {
           name: options.branch,
           owner: options.owner || "",
@@ -163,7 +177,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
         // Update state: branch created
         if (operationState) {
-          updateBranchState(operationState.id, options.branch, { created: true });
+          updateBranchState(operationState.id, options.branch, {
+            created: true,
+          });
         }
       }
 
@@ -185,7 +201,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
       // Update state: committed
       if (operationState) {
-        updateBranchState(operationState.id, options.branch, { committed: true });
+        updateBranchState(operationState.id, options.branch, {
+          committed: true,
+        });
       }
 
       // Push if requested
@@ -204,7 +222,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
         // Update state: pushed
         if (operationState) {
-          updateBranchState(operationState.id, options.branch, { pushed: true });
+          updateBranchState(operationState.id, options.branch, {
+            pushed: true,
+          });
         }
       }
 
@@ -212,7 +232,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       if ((options.pr || options.draftPr) && options.push) {
         try {
           if (operationState) {
-            updateOperationState(operationState.id, { currentState: "creating-pr" });
+            updateOperationState(operationState.id, {
+              currentState: "creating-pr",
+            });
           }
 
           const defaultBranch = await getDefaultBranch();
@@ -228,16 +250,24 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
           if (prResult) {
             prUrl = prResult.url;
             prNumber = prResult.number;
-            log.success(`${options.draftPr ? "Draft " : ""}Pull request #${prResult.number} created: ${prResult.url}`);
+            log.success(
+              `${options.draftPr ? "Draft " : ""}Pull request #${
+                prResult.number
+              } created: ${prResult.url}`
+            );
 
             // Update state: PR created
             if (operationState) {
-              updateBranchState(operationState.id, options.branch, { prCreated: true });
+              updateBranchState(operationState.id, options.branch, {
+                prCreated: true,
+              });
             }
           }
         } catch (prError) {
           log.error(`Failed to create pull request: ${prError}`);
-          log.info("Branch was successfully created and pushed, but PR creation failed");
+          log.info(
+            "Branch was successfully created and pushed, but PR creation failed"
+          );
 
           // Update state: PR creation failed (but don't fail the whole operation)
           if (operationState) {
@@ -300,7 +330,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
           // We should restore them before deleting the branch to prevent data loss
           if (commitSucceeded) {
             log.warn(`Commit succeeded but subsequent operation failed.`);
-            log.info(`Restoring files from branch "${options.branch}" to prevent data loss...`);
+            log.info(
+              `Restoring files from branch "${options.branch}" to prevent data loss...`
+            );
 
             try {
               await restoreFilesFromBranch(options.branch, filesToCommit);
@@ -310,7 +342,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
               log.info(`To recover files manually, run:`);
               log.info(`  git checkout ${options.branch} -- <file>`);
               // Don't delete branch if restore failed
-              log.info(`Branch "${options.branch}" was kept to preserve your changes.`);
+              log.info(
+                `Branch "${options.branch}" was kept to preserve your changes.`
+              );
               throw operationError;
             }
 
@@ -320,7 +354,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
               await deleteBranch(options.branch, true);
               log.info(`Files have been restored to your working directory.`);
             } else {
-              log.info(`Branch "${options.branch}" was kept despite the failure.`);
+              log.info(
+                `Branch "${options.branch}" was kept despite the failure.`
+              );
               log.info(`Files have been restored to your working directory.`);
             }
           } else {
@@ -329,7 +365,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
               log.info(`Cleaning up: Deleting branch "${options.branch}"...`);
               await deleteBranch(options.branch, true);
             } else {
-              log.info(`Branch "${options.branch}" was kept despite the failure.`);
+              log.info(
+                `Branch "${options.branch}" was kept despite the failure.`
+              );
             }
           }
         } catch (cleanupError) {
@@ -346,8 +384,8 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     if (isSubOperation) {
       return {
         success: false,
-        branchName: options.branch,
-        owner: options.owner,
+        branchName: options.branch ?? "",
+        owner: options.owner ?? "",
         files: filesToCommit,
         pushed,
         prUrl,
@@ -359,9 +397,15 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     // Provide recovery instructions for standalone operations
     if (operationState) {
       log.info("\nRecovery options:");
-      log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`);
-      log.info(`  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`);
-      log.info(`  3. Run 'codeowners-git recover --list' to see all incomplete operations`);
+      log.info(
+        `  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`
+      );
+      log.info(
+        `  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`
+      );
+      log.info(
+        `  3. Run 'codeowners-git recover --list' to see all incomplete operations`
+      );
     }
 
     process.exit(1);

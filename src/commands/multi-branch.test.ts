@@ -91,7 +91,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCallOptions = options;
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -135,7 +141,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCalls.push(options);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -176,7 +188,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCalls.push(options);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -207,10 +225,23 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         if (options.owner === "@team-b") {
-          throw new Error("Branch creation failed");
+          return Promise.resolve({
+            success: false,
+            branchName: options.branch,
+            owner: options.owner,
+            files: [],
+            pushed: false,
+            error: "Branch creation failed",
+          });
         }
         successfulOwners.push(options.owner);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -223,14 +254,9 @@ describe("multi-branch command", () => {
 
     expect(successfulOwners).toEqual(["@team-a", "@team-c"]);
     expect(
-      consoleErrors.some((msg) =>
-        msg.includes("Failed to create branch for @team-b")
-      )
+      consoleOutput.some((msg) => msg.includes("Successfully created 2 of 3 branches"))
     ).toBe(true);
-    expect(
-      consoleOutput.some((msg) => msg.includes("Successful: @team-a, @team-c"))
-    ).toBe(true);
-    expect(consoleErrors.some((msg) => msg.includes("Failed: @team-b"))).toBe(
+    expect(consoleErrors.some((msg) => msg.includes("Failed: 1 branches"))).toBe(
       true
     );
   });
@@ -273,7 +299,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCalls.push(options);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -315,7 +347,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCalls.push(options);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -348,7 +386,15 @@ describe("multi-branch command", () => {
     }));
 
     mock.module("./branch", () => ({
-      branch: mock(() => Promise.resolve()),
+      branch: mock((options: any) => {
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
+      }),
     }));
 
     const { multiBranch: mockedMultiBranch } = await import("./multi-branch");
@@ -385,7 +431,13 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         branchCalls.push(options);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -429,7 +481,13 @@ describe("multi-branch command", () => {
       branch: mock((options: any) => {
         // All owners should succeed now, but owner-y will have no files and return early
         successfulOwners.push(options.owner);
-        return Promise.resolve();
+        return Promise.resolve({
+          success: true,
+          branchName: options.branch,
+          owner: options.owner,
+          files: [],
+          pushed: false,
+        });
       }),
     }));
 
@@ -448,7 +506,7 @@ describe("multi-branch command", () => {
     ]);
     expect(
       consoleOutput.some((msg) =>
-        msg.includes("Successful: @owner-x, @owner-y, @owner-z")
+        msg.includes("Successfully created 3 of 3 branches")
       )
     ).toBe(true);
   });

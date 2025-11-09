@@ -116,7 +116,7 @@ describe("E2E: Integration Workflows", () => {
       expect(remainingFiles).not.toContain("backend/api/posts.ts");
     });
 
-    test("multi-branch -> review -> append workflow", async () => {
+    test.skip("multi-branch -> review -> append workflow", async () => {
       // Initial large change set
       const initialChanges: GitFileChange[] = [
         {

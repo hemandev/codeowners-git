@@ -227,6 +227,43 @@ This will:
    - Add a commit message like "Add new feature - @team-a"
    - Push each branch to the remote if the `-p` flag is provided
 
+### `extract`
+
+Extract file changes from a source branch or commit to your working directory (unstaged). This is useful when you want to copy changes from another branch to review and then commit using the `branch` command.
+
+Usage:
+
+```bash
+codeowners-git extract [options]
+# or
+cg extract [options]
+```
+
+Options:
+
+- `--source, -s` **(required)** Source branch or commit to extract from
+- `--owner, -o` Filter extracted files by code owner (supports micromatch patterns like `@team-*`)
+- `--compare-main` Compare source against main branch instead of detecting merge-base
+
+Examples:
+
+```bash
+# Extract all changes from a branch (files will be unstaged in working directory)
+cg extract -s feature/other-team
+
+# Extract only specific owner's files using micromatch patterns
+cg extract -s feature/other-team -o "@my-team"
+cg extract -s feature/other-team -o "@team-*"
+
+# Extract from a commit hash
+cg extract -s abc123def
+
+# Extract comparing against main (instead of detecting merge-base)
+cg extract -s feature/long-running --compare-main
+```
+
+> **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.
+
 ### `recover`
 
 Recover from failed or incomplete operations. When `branch` or `multi-branch` commands fail, the tool tracks the operation state and allows you to clean up and return to your original branch.
@@ -263,12 +300,14 @@ cg recover --id abc12345-6789-... --keep-branches
 ```
 
 **When to use:**
+
 - Operation failed due to network errors
 - Process was interrupted (Ctrl+C)
 - Push failed but branch was created
 - Need to clean up after errors
 
 **What it does:**
+
 1. Returns to your original branch
 2. Optionally deletes created branches (unless `--keep-branches`)
 3. Cleans up state files
@@ -287,6 +326,7 @@ Recovery options:
 ```
 
 The tool automatically handles:
+
 - Graceful shutdown on Ctrl+C (SIGINT/SIGTERM)
 - State persistence across crashes
 - Detailed operation tracking (branch creation, commits, pushes, PR creation)
