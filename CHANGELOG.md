@@ -1,5 +1,57 @@
 # codeowners-git
 
+## 1.8.0
+
+### Minor Changes
+
+- fca1a4d: Add graceful error handling with state tracking and recovery
+
+  This release introduces a comprehensive error handling system that prevents users from being stuck in a limbo state when operations fail:
+
+  **New Features:**
+
+  - **State Tracking**: Every operation is tracked with a unique UUID in `~/.codeowners-git/state/` (user's home directory)
+  - **Recovery Command**: New `recover` command to clean up and return to original state after failures
+    - `recover --list`: List all incomplete operations
+    - `recover --auto`: Automatically recover most recent operation
+    - `recover --id <uuid>`: Recover specific operation
+    - `recover --keep-branches`: Keep created branches during recovery
+  - **Graceful Shutdown**: Signal handlers (SIGINT/SIGTERM) provide recovery instructions on interruption
+  - **Enhanced Error Messages**: Clear recovery instructions shown when operations fail
+
+  **Improvements:**
+
+  - Operations tracked through all stages (creating-branch, committing, pushing, creating-pr)
+  - Automatic cleanup on success (state files deleted)
+  - Smart cleanup on failure (return to original branch, optional branch deletion)
+  - State persists across crashes for reliable recovery
+  - Detailed per-branch status tracking (created, committed, pushed, PR created, errors)
+
+  **Breaking Changes:** None
+
+  Users can now confidently recover from any error scenario (network failures, process crashes, user interruptions) using the new `recover` command.
+
+- fca1a4d: Add `extract` command to copy file changes from source branches/commits
+
+  New `extract` command allows you to:
+
+  - Extract changed files from any branch or commit to your working directory (unstaged)
+  - Filter extracted files by codeowner using micromatch patterns (`@team-*`)
+  - Automatically detect merge-base or compare against main branch
+  - Review and modify extracted files before committing
+
+  Common workflow:
+
+  ```bash
+  # Extract files from another branch
+  cg extract -s feature/other-team -o "@my-team"
+
+  # Then use branch command to commit
+  cg branch -o @my-team -b my-branch -m "Extracted changes" -p --pr
+  ```
+
+  This is useful for cherry-picking changes from colleague's branches or copying work between feature branches.
+
 ## 1.7.0
 
 ### Minor Changes
