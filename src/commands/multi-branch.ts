@@ -1,8 +1,9 @@
 import { getChangedFiles, getCurrentBranch, hasStagedChanges, getStagedFiles } from "../utils/git";
 import { getOwner } from "../utils/codeowners";
-import { branch } from "./branch";
+import { branch, type BranchResult } from "./branch";
 import { log } from "../utils/logger";
 import micromatch from "micromatch";
+import Table from "cli-table3";
 import {
   createOperationState,
   completeOperation,
@@ -137,86 +138,110 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       log.info(`Processing ${codeowners.length} codeowners after filtering: ${codeowners.join(", ")}`);
     }
 
-    // Track success and failures
-    const results = {
-      success: [] as string[],
-      failure: [] as string[],
-      prSuccess: [] as string[],
-      prFailure: [] as string[],
-    };
+    // Track detailed results for each branch
+    const results: BranchResult[] = [];
 
     // Process each codeowner
     for (const owner of codeowners) {
-      try {
-        // Sanitize owner name for branch
-        const sanitizedOwner = owner
-          .replace(/[^a-zA-Z0-9-_@]/g, "-")
-          .replace(/^@/, "");
+      // Sanitize owner name for branch
+      const sanitizedOwner = owner
+        .replace(/[^a-zA-Z0-9-_@]/g, "-")
+        .replace(/^@/, "");
 
-        // Format branch name: [branch-option]/owner
-        const branchName = `${options.branch}/${sanitizedOwner}`;
+      // Format branch name: [branch-option]/owner
+      const branchName = `${options.branch}/${sanitizedOwner}`;
 
-        // Format commit message with owner
-        const commitMessage = `${options.message} - ${owner}`;
+      // Format commit message with owner
+      const commitMessage = `${options.message} - ${owner}`;
 
-        log.info(options.append ? `Updating branch for ${owner}...` : `Creating branch for ${owner}...`);
+      log.info(options.append ? `Updating branch for ${owner}...` : `Creating branch for ${owner}...`);
 
-        // Create or update branch for this owner
-        await branch({
-          owner: owner,
-          branch: branchName,
-          message: commitMessage,
-          verify: options.verify,
-          push: options.push,
-          remote: options.remote,
-          upstream: options.upstream,
-          force: options.force,
-          keepBranchOnFailure: options.keepBranchOnFailure,
-          isDefaultOwner: owner === options.defaultOwner,
-          append: options.append,
-          pr: options.pr,
-          draftPr: options.draftPr,
-          operationState: operationState || undefined, // Pass operation state
-        });
+      // Create or update branch for this owner
+      const result = await branch({
+        owner: owner,
+        branch: branchName,
+        message: commitMessage,
+        verify: options.verify,
+        push: options.push,
+        remote: options.remote,
+        upstream: options.upstream,
+        force: options.force,
+        keepBranchOnFailure: options.keepBranchOnFailure,
+        isDefaultOwner: owner === options.defaultOwner,
+        append: options.append,
+        pr: options.pr,
+        draftPr: options.draftPr,
+        operationState: operationState || undefined, // Pass operation state
+      });
 
-        results.success.push(owner);
-        
-        // Track PR results (the branch function handles PR creation internally,
-        // so we'll assume PR success if branch creation succeeded and PR was requested)
-        if ((options.pr || options.draftPr) && options.push) {
-          results.prSuccess.push(owner);
-        }
-      } catch (error) {
-        log.error(`Failed to ${options.append ? 'update' : 'create'} branch for ${owner}: ${error}`);
-        results.failure.push(owner);
-      }
+      results.push(result);
     }
+
+    // Display detailed summary table
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
 
     log.header(options.append ? "Multi-branch update summary" : "Multi-branch creation summary");
     log.info(
       options.append
-        ? `Successfully updated branches for ${results.success.length} of ${codeowners.length} codeowners`
-        : `Successfully created branches for ${results.success.length} of ${codeowners.length} codeowners`
+        ? `Successfully updated ${successCount} of ${codeowners.length} branches`
+        : `Successfully created ${successCount} of ${codeowners.length} branches`
     );
 
-    if (results.success.length) {
-      log.success(`Successful: ${results.success.join(", ")}`);
+    if (failureCount > 0) {
+      log.error(`Failed: ${failureCount} branches`);
     }
 
-    if (results.failure.length) {
-      log.error(`Failed: ${results.failure.join(", ")}`);
+    console.log(""); // Empty line before table
+
+    // Create detailed table
+    const table = new Table({
+      head: ['Status', 'Owner', 'Branch', 'Files', 'Pushed', 'PR'],
+      colWidths: [10, 20, 40, 10, 10, 50],
+      wordWrap: true,
+    });
+
+    for (const result of results) {
+      const status = result.success ? '✓' : '✗';
+      const fileCount = result.files.length;
+      const pushedStatus = result.pushed ? '✓' : '-';
+      const prInfo = result.prUrl
+        ? result.prUrl
+        : result.error && result.error.includes('PR creation failed')
+        ? 'Failed'
+        : '-';
+
+      table.push([
+        status,
+        result.owner,
+        result.branchName,
+        `${fileCount} file${fileCount !== 1 ? 's' : ''}`,
+        pushedStatus,
+        prInfo,
+      ]);
     }
 
-    // Show PR creation summary if PR options were used
-    if (options.pr || options.draftPr) {
-      log.header(`${options.draftPr ? "Draft " : ""}Pull request creation summary`);
-      log.info(
-        `Successfully created ${options.draftPr ? "draft " : ""}pull requests for ${results.prSuccess.length} of ${results.success.length} successful branches`
-      );
+    console.log(table.toString());
 
-      if (results.prSuccess.length) {
-        log.success(`${options.draftPr ? "Draft " : ""}PRs created for: ${results.prSuccess.join(", ")}`);
+    // Show summary of files per branch if there are any results
+    if (results.length > 0) {
+      console.log("\nFiles by branch:");
+      for (const result of results) {
+        if (result.success && result.files.length > 0) {
+          console.log(`\n${result.branchName} (${result.owner}):`);
+          result.files.forEach(file => console.log(`  - ${file}`));
+        }
       }
+    }
+
+    // Show errors if any
+    const errors = results.filter(r => r.error);
+    if (errors.length > 0) {
+      console.log("\nErrors:");
+      errors.forEach(result => {
+        console.log(`\n${result.branchName} (${result.owner}):`);
+        console.log(`  ${result.error}`);
+      });
     }
 
     // Mark operation as complete

@@ -40,13 +40,27 @@ export type BranchOptions = {
   operationState?: OperationStateData; // For multi-branch operations
 };
 
-export const branch = async (options: BranchOptions) => {
+export type BranchResult = {
+  success: boolean;
+  branchName: string;
+  owner: string;
+  files: string[];
+  pushed: boolean;
+  prUrl?: string;
+  prNumber?: number;
+  error?: string;
+};
+
+export const branch = async (options: BranchOptions): Promise<BranchResult> => {
   // Variables for cleanup
   let originalBranch = "";
   let stashId: string | null = null;
   let newBranchCreated = false;
   let commitSucceeded = false;
   let filesToCommit: string[] = [];
+  let prUrl: string | undefined;
+  let prNumber: number | undefined;
+  let pushed = false;
   let operationState: OperationStateData | null = options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
 
@@ -101,7 +115,14 @@ export const branch = async (options: BranchOptions) => {
     filesToCommit = await getOwnerFiles(options.owner, options.isDefaultOwner || false);
     if (filesToCommit.length <= 0) {
       log.warn(`No files found for ${options.owner}. Skipping branch creation.`);
-      return;
+      return {
+        success: false,
+        branchName: options.branch,
+        owner: options.owner,
+        files: [],
+        pushed: false,
+        error: "No files found for this owner",
+      };
     }
 
     log.file(`Files to be committed:\n  ${filesToCommit.join("\n  ")}`);
@@ -179,6 +200,7 @@ export const branch = async (options: BranchOptions) => {
           force: options.force,
           noVerify: !options.verify,
         });
+        pushed = true;
 
         // Update state: pushed
         if (operationState) {
@@ -204,6 +226,8 @@ export const branch = async (options: BranchOptions) => {
           );
 
           if (prResult) {
+            prUrl = prResult.url;
+            prNumber = prResult.number;
             log.success(`${options.draftPr ? "Draft " : ""}Pull request #${prResult.number} created: ${prResult.url}`);
 
             // Update state: PR created
@@ -246,6 +270,17 @@ export const branch = async (options: BranchOptions) => {
             : `Branch "${options.branch}" created and changes committed.`
         );
       }
+
+      // Return success result
+      return {
+        success: true,
+        branchName: options.branch,
+        owner: options.owner,
+        files: filesToCommit,
+        pushed,
+        prUrl,
+        prNumber,
+      };
     } catch (operationError) {
       // Handle operation errors with cleanup
       log.error(`Operation failed: ${operationError}`);
@@ -307,8 +342,22 @@ export const branch = async (options: BranchOptions) => {
   } catch (err) {
     log.error(`Branch operation failed: ${err}`);
 
+    // If called from multi-branch, return error result instead of exiting
+    if (isSubOperation) {
+      return {
+        success: false,
+        branchName: options.branch,
+        owner: options.owner,
+        files: filesToCommit,
+        pushed,
+        prUrl,
+        prNumber,
+        error: String(err),
+      };
+    }
+
     // Provide recovery instructions for standalone operations
-    if (!isSubOperation && operationState) {
+    if (operationState) {
       log.info("\nRecovery options:");
       log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`);
       log.info(`  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`);
