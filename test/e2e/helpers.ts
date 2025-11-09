@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { $ } from "bun";
+import { unlink } from "node:fs/promises";
 
 export interface CLIResult {
   stdout: string;
@@ -88,20 +89,30 @@ export class E2ETestHelper {
   }
 
   /**
-   * Stage files with specific changes
+   * Create file changes in the working directory
+   * @param changes - Array of file changes to apply
+   * @param stage - Whether to stage the changes (default: false)
+   *                Set to true when setting up files for commit
+   *                Set to false when creating working directory changes for testing
    */
-  async stageFiles(changes: GitFileChange[]): Promise<void> {
+  async stageFiles(changes: GitFileChange[], stage: boolean = false): Promise<void> {
     for (const change of changes) {
       const filePath = join(this.testRepoPath, change.path);
-      
+
       switch (change.operation) {
         case "add":
         case "modify":
           await Bun.write(filePath, change.content);
-          await this.runGit(["add", change.path]);
+          if (stage) {
+            await this.runGit(["add", change.path]);
+          }
           break;
         case "delete":
-          await this.runGit(["rm", change.path]);
+          if (stage) {
+            await this.runGit(["rm", change.path]);
+          } else {
+            await unlink(filePath);
+          }
           break;
       }
     }

@@ -90,7 +90,30 @@ export const applyStash = async (stashId: string | null): Promise<boolean> => {
 
 export const getChangedFiles = async (): Promise<string[]> => {
   const status = await git.status();
-  return status.files.map((file) => file.path);
+  // Return files that have changes in working directory (unstaged or untracked)
+  // This includes: untracked files (??) and modified but not staged files ( M)
+  return status.files
+    .filter((file) => file.working_dir !== " ")
+    .map((file) => file.path);
+};
+
+/**
+ * Get staged files (files added to git staging area)
+ * Includes files with index status other than ' ' or '?'
+ */
+export const getStagedFiles = async (): Promise<string[]> => {
+  const status = await git.status();
+  return status.files
+    .filter((file) => file.index !== " " && file.index !== "?")
+    .map((file) => file.path);
+};
+
+/**
+ * Check if there are any staged files
+ */
+export const hasStagedChanges = async (): Promise<boolean> => {
+  const stagedFiles = await getStagedFiles();
+  return stagedFiles.length > 0;
 };
 
 export const branchExists = async (branchName: string): Promise<boolean> => {
@@ -110,6 +133,43 @@ export const createBranch = async (branchName: string): Promise<void> => {
     log.info(`Now on branch: "${branchName}"`);
   } catch (error) {
     throw new Error(`Failed to create branch "${branchName}": ${error}`);
+  }
+};
+
+/**
+ * Restore files from a specific branch to working directory
+ * This is useful when we need to recover files before deleting a branch
+ */
+export const restoreFilesFromBranch = async (
+  branchName: string,
+  files: string[]
+): Promise<void> => {
+  if (files.length === 0) return;
+
+  try {
+    log.info(`Restoring ${files.length} file(s) from branch "${branchName}"...`);
+
+    // Use git checkout to get file contents from the branch
+    // This stages the files, so we'll need to unstage them after
+    for (const file of files) {
+      try {
+        await git.raw(["checkout", branchName, "--", file]);
+      } catch (error) {
+        log.warn(`Could not restore ${file}: ${error}`);
+      }
+    }
+
+    // Unstage the restored files to return them to unstaged state
+    try {
+      await git.raw(["restore", "--staged", ...files]);
+    } catch (error) {
+      log.warn(`Files were restored but could not be unstaged: ${error}`);
+      log.info(`Run 'git restore --staged .' to unstage them`);
+    }
+
+    log.success(`Files restored to working directory`);
+  } catch (error) {
+    throw new Error(`Failed to restore files from branch: ${error}`);
   }
 };
 
@@ -261,7 +321,110 @@ export const getDefaultBranch = async (): Promise<string> => {
       return 'master';
     }
   }
-  
+
   // Final fallback
   return 'main';
+};
+
+/**
+ * Get the base branch where a source branch diverged from
+ * Uses git merge-base to find common ancestor with candidate bases
+ */
+export const getBaseBranch = async (
+  sourceBranch: string,
+  candidateBases: string[] = ['main', 'master', 'develop']
+): Promise<string> => {
+  // First try to detect default branch
+  const defaultBranch = await getDefaultBranch();
+
+  // Add default branch to candidates if not already there
+  if (!candidateBases.includes(defaultBranch)) {
+    candidateBases = [defaultBranch, ...candidateBases];
+  }
+
+  // Try each candidate base to find merge-base
+  for (const base of candidateBases) {
+    try {
+      // Check if base branch exists
+      const branches = await git.branch();
+      const allBranches = [...branches.all];
+
+      if (allBranches.includes(base) || allBranches.includes(`remotes/origin/${base}`)) {
+        // Try to get merge-base
+        await git.raw(['merge-base', sourceBranch, base]);
+        return base;
+      }
+    } catch {
+      // Continue to next candidate
+      continue;
+    }
+  }
+
+  // Fallback to default branch
+  return defaultBranch;
+};
+
+/**
+ * Get changed files between two git references (branches/commits)
+ * If target is not provided, compares source against its base branch
+ */
+export const getChangedFilesBetween = async (
+  source: string,
+  target?: string
+): Promise<string[]> => {
+  try {
+    let compareTarget = target;
+
+    // If no target provided, find the base branch
+    if (!compareTarget) {
+      compareTarget = await getBaseBranch(source);
+    }
+
+    // Get the merge-base (common ancestor)
+    const mergeBase = await git.raw(['merge-base', source, compareTarget]);
+    const baseCommit = mergeBase.trim();
+
+    // Get files changed between merge-base and source
+    const diff = await git.diff(['--name-only', `${baseCommit}..${source}`]);
+
+    if (!diff.trim()) {
+      return [];
+    }
+
+    return diff.trim().split('\n').filter(file => file.length > 0);
+  } catch (error) {
+    throw new Error(`Failed to get changed files between ${source} and ${target || 'base'}: ${error}`);
+  }
+};
+
+/**
+ * Extract files from a specific git reference to working directory (unstaged)
+ */
+export const extractFilesFromRef = async (
+  ref: string,
+  files: string[]
+): Promise<void> => {
+  try {
+    for (const file of files) {
+      try {
+        // Get file content from the ref
+        const content = await git.show([`${ref}:${file}`]);
+
+        // Write to working directory
+        const filePath = path.join(process.cwd(), file);
+        const dirPath = path.dirname(filePath);
+
+        // Ensure directory exists
+        await fs.mkdir(dirPath, { recursive: true });
+
+        // Write file
+        await fs.writeFile(filePath, content);
+      } catch (error) {
+        // File might have been deleted in the ref, skip it
+        log.warn(`Could not extract ${file} from ${ref}: ${error}`);
+      }
+    }
+  } catch (error) {
+    throw new Error(`Failed to extract files from ${ref}: ${error}`);
+  }
 };

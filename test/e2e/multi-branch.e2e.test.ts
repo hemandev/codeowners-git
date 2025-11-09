@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { E2ETestSetup } from "./setup";
-import { E2ETestHelper, GitFileChange } from "./helpers";
+import { E2ETestHelper, type GitFileChange } from "./helpers";
 
 describe.skip("E2E: multi-branch command", () => {
   let setup: E2ETestSetup;

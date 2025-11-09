@@ -188,7 +188,7 @@ describe("E2E: list command", () => {
           content: "export const temp = true;",
           operation: "add",
         },
-      ]);
+      ], true); // Stage for commit
 
       await helper.runGit(["commit", "-m", "Add temp file"]);
 
@@ -222,7 +222,7 @@ describe("E2E: list command", () => {
           content: "export const existing2 = true;",
           operation: "add",
         },
-      ]);
+      ], true); // Stage for commit
 
       await helper.runGit(["commit", "-m", "Add existing files"]);
 

@@ -11,6 +11,7 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Identifying files owned by specific teams using the CODEOWNERS file.
 - Creating compact, team-specific branches with only their affected files.
 - Streamlining the review process with smaller, targeted PRs.
+- **Graceful error handling** with automatic recovery from failures.
 
 > **Note:** This tool works with **unstaged files**. Make sure to check if your files are unstaged before proceeding.
 
@@ -225,6 +226,113 @@ This will:
    - Commit only the files owned by that team
    - Add a commit message like "Add new feature - @team-a"
    - Push each branch to the remote if the `-p` flag is provided
+
+### `extract`
+
+Extract file changes from a source branch or commit to your working directory (unstaged). This is useful when you want to copy changes from another branch to review and then commit using the `branch` command.
+
+Usage:
+
+```bash
+codeowners-git extract [options]
+# or
+cg extract [options]
+```
+
+Options:
+
+- `--source, -s` **(required)** Source branch or commit to extract from
+- `--owner, -o` Filter extracted files by code owner (supports micromatch patterns like `@team-*`)
+- `--compare-main` Compare source against main branch instead of detecting merge-base
+
+Examples:
+
+```bash
+# Extract all changes from a branch (files will be unstaged in working directory)
+cg extract -s feature/other-team
+
+# Extract only specific owner's files using micromatch patterns
+cg extract -s feature/other-team -o "@my-team"
+cg extract -s feature/other-team -o "@team-*"
+
+# Extract from a commit hash
+cg extract -s abc123def
+
+# Extract comparing against main (instead of detecting merge-base)
+cg extract -s feature/long-running --compare-main
+```
+
+> **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.
+
+### `recover`
+
+Recover from failed or incomplete operations. When `branch` or `multi-branch` commands fail, the tool tracks the operation state and allows you to clean up and return to your original branch.
+
+Usage:
+
+```bash
+codeowners-git recover [options]
+# or
+cg recover [options]
+```
+
+Options:
+
+- `--list` List all incomplete operations
+- `--id <operationId>` Recover specific operation by UUID
+- `--keep-branches` Keep created branches instead of deleting them
+- `--auto` Automatically recover most recent operation without prompts
+
+Examples:
+
+```bash
+# List all incomplete operations
+cg recover --list
+
+# Automatically recover from most recent failure
+cg recover --auto
+
+# Recover specific operation
+cg recover --id abc12345-6789-...
+
+# Recover but keep the created branches
+cg recover --id abc12345-6789-... --keep-branches
+```
+
+**When to use:**
+
+- Operation failed due to network errors
+- Process was interrupted (Ctrl+C)
+- Push failed but branch was created
+- Need to clean up after errors
+
+**What it does:**
+
+1. Returns to your original branch
+2. Optionally deletes created branches (unless `--keep-branches`)
+3. Cleans up state files
+
+**How it works:**
+
+Every `branch` and `multi-branch` operation is tracked with a unique UUID in your home directory (`~/.codeowners-git/state/`). If an operation fails, you'll see recovery instructions:
+
+```bash
+✗ Operation failed: Push failed with exit code 128
+
+Recovery options:
+  1. Run 'codeowners-git recover --id abc12345...' to clean up
+  2. Run 'codeowners-git recover --id abc12345... --keep-branches' to keep branches
+  3. Run 'codeowners-git recover --list' to see all incomplete operations
+```
+
+The tool automatically handles:
+
+- Graceful shutdown on Ctrl+C (SIGINT/SIGTERM)
+- State persistence across crashes
+- Detailed operation tracking (branch creation, commits, pushes, PR creation)
+- Clean recovery to original state
+
+> **Note:** State files are stored in `~/.codeowners-git/state/` outside your project directory, so no `.gitignore` entries are needed.
 
 ## Contributing
 
