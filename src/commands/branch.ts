@@ -7,6 +7,8 @@ import {
   deleteBranch,
   branchExists,
   getDefaultBranch,
+  hasStagedChanges,
+  getStagedFiles,
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
@@ -58,6 +60,19 @@ export const branch = async (options: BranchOptions) => {
 
     if (options.pr && options.draftPr) {
       throw new Error("Cannot use both --pr and --draft-pr options");
+    }
+
+    // Check for staged changes
+    if (await hasStagedChanges()) {
+      const stagedFiles = await getStagedFiles();
+      log.error("Changes need to be unstaged in order for this to work.");
+      log.info("\nStaged files detected:");
+      stagedFiles.forEach((file) => log.info(`  - ${file}`));
+      log.info("\nTo unstage files, run:");
+      log.info("  git restore --staged .");
+      log.info("\nOr to unstage specific files:");
+      log.info("  git restore --staged <file>");
+      throw new Error("Staged changes detected. Please unstage all changes before running this command.");
     }
 
     log.info(options.append ? "Starting branch update process..." : "Starting branch creation process...");

@@ -1,4 +1,4 @@
-import { getChangedFiles, getCurrentBranch } from "../utils/git";
+import { getChangedFiles, getCurrentBranch, hasStagedChanges, getStagedFiles } from "../utils/git";
 import { getOwner } from "../utils/codeowners";
 import { branch } from "./branch";
 import { log } from "../utils/logger";
@@ -47,6 +47,19 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
     if (options.pr && options.draftPr) {
       throw new Error("Cannot use both --pr and --draft-pr options");
+    }
+
+    // Check for staged changes
+    if (await hasStagedChanges()) {
+      const stagedFiles = await getStagedFiles();
+      log.error("Changes need to be unstaged in order for this to work.");
+      log.info("\nStaged files detected:");
+      stagedFiles.forEach((file) => log.info(`  - ${file}`));
+      log.info("\nTo unstage files, run:");
+      log.info("  git restore --staged .");
+      log.info("\nOr to unstage specific files:");
+      log.info("  git restore --staged <file>");
+      throw new Error("Staged changes detected. Please unstage all changes before running this command.");
     }
 
     log.info(options.append ? "Starting multi-branch update process..." : "Starting multi-branch creation process...");
