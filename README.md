@@ -116,15 +116,19 @@ cg list -o @myteam
 
 ### `branch`
 
-Manage branch permissions in CODEOWNERS file.
+Create a branch with changes owned by a specific codeowner.
 
 Usage:
 
 ```bash
-codeowners-git branch [options]
+codeowners-git branch [pattern] [options]
 # or
-cg branch [options]
+cg branch [pattern] [options]
 ```
+
+Arguments:
+
+- `[pattern]` Optional path pattern to filter files (micromatch syntax, comma-separated). Examples: `packages`, `src/**/*.tsx`, `packages,apps`
 
 Options:
 
@@ -144,10 +148,17 @@ Options:
 Example:
 
 ```bash
-# Create a new branch
-codeowners-git branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
-# or
+# Create a new branch with all files owned by @myteam
 cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
+
+# Filter to only files in the packages directory
+cg branch "packages" -o @myteam -b "feature/packages" -m "Update packages" -p
+
+# Filter with glob pattern (only .tsx files)
+cg branch "**/*.tsx" -o @myteam -b "feature/tsx" -m "Update tsx files" -p
+
+# Filter multiple directories (comma-separated)
+cg branch "packages,apps" -o @myteam -b "feature/update" -m "Update packages and apps" -p
 
 # Create a branch and automatically create a pull request
 cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --pr
@@ -166,10 +177,14 @@ Create branches for all codeowners with changes.
 Usage:
 
 ```bash
-codeowners-git multi-branch [options]
+codeowners-git multi-branch [pattern] [options]
 # or
-cg multi-branch [options]
+cg multi-branch [pattern] [options]
 ```
+
+Arguments:
+
+- `[pattern]` Optional path pattern to filter files (micromatch syntax, comma-separated). Examples: `packages`, `src/**/*.tsx`, `packages,apps`
 
 Options:
 
@@ -194,9 +209,16 @@ Example:
 
 ```bash
 # Create branches for all codeowners
-codeowners-git multi-branch -b "feature/new-feature" -m "Add new feature" -p
-# or
 cg multi-branch -b "feature/new-feature" -m "Add new feature" -p
+
+# Filter to only files in the packages directory
+cg multi-branch "packages" -b "feature/packages" -m "Update packages" -p
+
+# Filter with glob pattern (only .tsx files)
+cg multi-branch "**/*.tsx" -b "feature/tsx" -m "Update tsx files" -p
+
+# Filter multiple directories (comma-separated)
+cg multi-branch "packages,apps" -b "feature/update" -m "Update" -p
 
 # Create branches and automatically create pull requests for each
 cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --pr

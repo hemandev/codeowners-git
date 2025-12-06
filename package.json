@@ -30,6 +30,7 @@
   "scripts": {
     "start": "bun run src/cli.ts",
     "build": "bun build src/cli.ts --compile --outfile bin/codeowners-git",
+    "build:test": "bun run build && mkdir -p ~/.local/bin && cp bin/codeowners-git ~/.local/bin/cg-test",
     "build:dist": "bun build src/cli.ts --outdir dist/ --target node",
     "test": "bun test --watch",
     "test:unit": "bun test src/**",

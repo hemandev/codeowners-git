@@ -28,6 +28,10 @@ program
 program
   .command("branch")
   .description("Create new branch with codeowner changes")
+  .argument(
+    "[pattern]",
+    "Path pattern to filter files (micromatch syntax, comma-separated)"
+  )
   .requiredOption("-o, --owner <owner>", "Code owner name")
   .requiredOption("-b, --branch <branch>", "Branch name")
   .requiredOption("-m, --message <message>", "Commit message")
@@ -52,11 +56,20 @@ program
     "--draft-pr",
     "Create a draft pull request after pushing (requires --push)"
   )
-  .action(branch);
+  .action((pattern: string | undefined, options) => {
+    branch({
+      ...options,
+      pathPattern: pattern,
+    });
+  });
 
 program
   .command("multi-branch")
   .description("Create branches for all codeowners")
+  .argument(
+    "[pattern]",
+    "Path pattern to filter files (micromatch syntax, comma-separated)"
+  )
   .requiredOption(
     "-b, --branch <branch>",
     "Base branch name (will be suffixed with codeowner name)"
@@ -98,7 +111,12 @@ program
     "--draft-pr",
     "Create draft pull requests after pushing (requires --push)"
   )
-  .action(multiBranch);
+  .action((pattern: string | undefined, options) => {
+    multiBranch({
+      ...options,
+      pathPattern: pattern,
+    });
+  });
 
 program
   .command("extract")

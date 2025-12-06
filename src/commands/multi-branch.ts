@@ -4,6 +4,7 @@ import { branch, type BranchResult } from "./branch";
 import { log } from "../utils/logger";
 import micromatch from "micromatch";
 import Table from "cli-table3";
+import { filterByPathPatterns } from "../utils/matcher";
 import {
   createOperationState,
   completeOperation,
@@ -26,6 +27,7 @@ export type MultiBranchOptions = {
   append?: boolean;
   pr?: boolean;
   draftPr?: boolean;
+  pathPattern?: string; // Comma-separated path patterns to filter files
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
@@ -79,10 +81,17 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     log.info(`Operation ID: ${operationState.id}`);
 
     // Get all changed files
-    const changedFiles = await getChangedFiles();
+    let changedFiles = await getChangedFiles();
+
+    // Apply path filtering (returns all files if no pattern)
+    changedFiles = filterByPathPatterns(changedFiles, options.pathPattern);
 
     if (changedFiles.length === 0) {
-      throw new Error("No changed files found in the repository");
+      throw new Error(
+        options.pathPattern
+          ? `No changed files found matching pattern: ${options.pathPattern}`
+          : "No changed files found in the repository"
+      );
     }
 
     // Extract all codeowners from the changed files
@@ -172,6 +181,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         pr: options.pr,
         draftPr: options.draftPr,
         operationState: operationState || undefined, // Pass operation state
+        pathPattern: options.pathPattern, // Pass path pattern
       });
 
       results.push(result);
