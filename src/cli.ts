@@ -5,6 +5,7 @@ import { branch } from "./commands/branch";
 import { multiBranch } from "./commands/multi-branch";
 import { extract } from "./commands/extract";
 import { recover } from "./commands/recover";
+import { configInit, configShow } from "./commands/config";
 import { getVersion } from "./commands/version";
 import { setupSignalHandlers } from "./utils/signals";
 
@@ -140,5 +141,21 @@ program
   .option("--list", "List all incomplete operations")
   .option("--auto", "Automatically recover most recent operation without prompts")
   .action(recover);
+
+// Config command with subcommands
+const configCommand = program
+  .command("config")
+  .description("Manage configuration settings");
+
+configCommand
+  .command("init")
+  .description("Create a new config file with default settings")
+  .option("-g, --global", "Create global config (~/.config/codeowners-git/config.json)")
+  .action(configInit);
+
+configCommand
+  .command("show")
+  .description("Show resolved configuration from all sources")
+  .action(configShow);
 
 program.parse(process.argv);

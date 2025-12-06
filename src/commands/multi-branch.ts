@@ -10,6 +10,7 @@ import {
   failOperation,
   type OperationStateData,
 } from "../utils/state";
+import { loadConfig, mergeWithCliOptions } from "../utils/config";
 
 export type MultiBranchOptions = {
   branch?: string;
@@ -27,10 +28,16 @@ export type MultiBranchOptions = {
   pr?: boolean;
   draftPr?: boolean;
   pathPattern?: string; // Comma-separated path patterns to filter files
+  branchPrefix?: string; // From config: prefix to prepend to branch name
+  messagePrefix?: string; // From config: prefix to prepend to message
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
   let operationState: OperationStateData | null = null;
+
+  // Load and merge config
+  const config = loadConfig();
+  options = mergeWithCliOptions(config, options);
 
   try {
     if (!options.branch || !options.message) {
@@ -181,6 +188,9 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         draftPr: options.draftPr,
         operationState: operationState || undefined, // Pass operation state
         pathPattern: options.pathPattern, // Pass path pattern
+        branchPrefix: options.branchPrefix, // Pass config prefix
+        messagePrefix: options.messagePrefix, // Pass config prefix
+        skipConfigLoad: true, // We already loaded config
       });
 
       results.push(result);

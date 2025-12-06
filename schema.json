@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/hemandev/codeowners-git/schema.json",
+  "title": "codeowners-git Configuration",
+  "description": "Configuration schema for codeowners-git CLI tool",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IntelliSense support"
+    },
+    "branchPrefix": {
+      "type": "string",
+      "description": "Prefix to prepend to branch names. Supports template expressions like ${username}/${owner.split('/').pop()}/",
+      "examples": [
+        "migration/",
+        "${username}/",
+        "${username}/${owner.split('/').pop().replace('ce-', '')}/"
+      ]
+    },
+    "messagePrefix": {
+      "type": "string",
+      "description": "Prefix to prepend to commit messages. Supports template expressions like [${owner.toUpperCase()}]",
+      "examples": [
+        "chore: migrate files for",
+        "[${owner.split('/').pop().toUpperCase()}]"
+      ]
+    },
+    "defaultOwner": {
+      "type": "string",
+      "description": "Default code owner to use when files have no CODEOWNERS entry",
+      "examples": ["@org/platform-team", "@myteam"]
+    },
+    "remote": {
+      "type": "string",
+      "description": "Git remote name to push to",
+      "default": "origin"
+    },
+    "push": {
+      "type": "boolean",
+      "description": "Push branches to remote after committing",
+      "default": false
+    },
+    "verify": {
+      "type": "boolean",
+      "description": "Run pre-commit hooks. Set to false to skip hooks (equivalent to --no-verify)",
+      "default": true
+    },
+    "include": {
+      "type": "string",
+      "description": "Comma-separated patterns to include specific code owners (micromatch syntax)",
+      "examples": ["team-*", "@org/team-a,@org/team-b", "*-platform"]
+    },
+    "ignore": {
+      "type": "string",
+      "description": "Comma-separated patterns to exclude specific code owners (micromatch syntax)",
+      "examples": ["*-legacy", "@org/deprecated-*"]
+    },
+    "upstream": {
+      "type": "string",
+      "description": "Upstream branch name pattern. Defaults to local branch name",
+      "examples": ["feature/${owner.split('/').pop()}"]
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Force push to remote (use with caution)",
+      "default": false
+    },
+    "keepBranchOnFailure": {
+      "type": "boolean",
+      "description": "Keep created branches even if the operation fails",
+      "default": false
+    },
+    "append": {
+      "type": "boolean",
+      "description": "Add commits to existing branches instead of creating new ones",
+      "default": false
+    },
+    "pr": {
+      "type": "boolean",
+      "description": "Create a pull request after pushing (requires push: true)",
+      "default": false
+    },
+    "draftPr": {
+      "type": "boolean",
+      "description": "Create a draft pull request after pushing (requires push: true)",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

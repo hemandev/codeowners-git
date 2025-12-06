@@ -2,6 +2,7 @@ import { getOwner, getOwnerFiles } from "../utils/codeowners";
 import { getChangedFiles } from "../utils/git";
 import { logFileList, log } from "../utils/logger";
 import { matchOwners } from "../utils/matcher";
+import { loadConfig, mergeWithCliOptions } from "../utils/config";
 
 export type ListOptions = {
   owner?: string;
@@ -9,6 +10,10 @@ export type ListOptions = {
 };
 
 export const listCodeowners = async (options: ListOptions) => {
+  // Load and merge config
+  const config = loadConfig();
+  options = mergeWithCliOptions(config, options);
+
   try {
     if (options.owner) {
       // Show filtered files for specific owner (exact match)
