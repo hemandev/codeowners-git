@@ -2,6 +2,8 @@
 "codeowners-git": major
 ---
 
+list and recover command enhancements
+
 ### Breaking Changes
 
 - **`list` command**: Removed `-o, --owner` flag - use `--include` instead for owner filtering
