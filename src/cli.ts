@@ -53,7 +53,7 @@ program
     "[pattern]",
     "Path pattern to filter files (micromatch syntax, comma-separated)"
   )
-  .requiredOption("-o, --owner <owner>", "Code owner name")
+  .requiredOption("-i, --include <patterns>", "Code owner pattern to filter files")
   .requiredOption("-b, --branch <branch>", "Branch name")
   .requiredOption("-m, --message <message>", "Commit message")
   .option("-n, --no-verify", "Skip lint-staged or any other ci checks")
@@ -172,8 +172,8 @@ program
   )
   .requiredOption("-s, --source <source>", "Source branch or commit to extract from")
   .option(
-    "-o, --owner <owner>",
-    "Filter extracted files by code owner (supports micromatch patterns)"
+    "-i, --include <patterns>",
+    "Filter extracted files by code owner pattern"
   )
   .option(
     "--compare-main",

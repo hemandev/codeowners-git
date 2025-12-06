@@ -170,7 +170,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
       // Create or update branch for this owner
       const result = await branch({
-        owner: owner,
+        include: owner,
         branch: branchName,
         message: commitMessage,
         verify: options.verify,

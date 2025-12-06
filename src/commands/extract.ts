@@ -16,7 +16,7 @@ import {
 
 export type ExtractOptions = {
   source: string; // Required: branch or commit to extract from
-  owner?: string; // Optional: micromatch pattern for owner filtering
+  include?: string; // Optional: micromatch pattern for owner filtering (renamed from owner for consistency)
   compareMain?: boolean; // Compare source vs main instead of merge-base
   pathPattern?: string; // Optional: path pattern to filter files
   exclusive?: boolean; // Only include files where owner is sole owner
@@ -31,7 +31,7 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       log.info("  cg extract -s <branch-or-commit>");
       log.info("\nExamples:");
       log.info("  cg extract -s feature/other-branch");
-      log.info("  cg extract -s feature/other-branch -o '@team-*'");
+      log.info("  cg extract -s feature/other-branch -i '@team-*'");
       log.info("  cg extract -s abc123def --compare-main");
       process.exit(1);
     }
@@ -87,8 +87,8 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
     // Filter by owner and/or co-owned flag
     let filesToExtract = changedFiles;
 
-    // When --co-owned is used without --owner, filter to files with 2+ owners
-    if (options.coOwned && !options.owner) {
+    // When --co-owned is used without --include, filter to files with 2+ owners
+    if (options.coOwned && !options.include) {
       log.info('Filtering to co-owned files (2+ owners)');
       filesToExtract = changedFiles.filter((file) => {
         const owners = getOwner(file);
@@ -103,8 +103,8 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       log.info(`Filtered to ${filesToExtract.length} co-owned file${filesToExtract.length !== 1 ? 's' : ''}`);
     }
 
-    if (options.owner) {
-      log.info(`Filtering files by owner pattern: ${options.owner}${options.exclusive ? ' (exclusive)' : ''}${options.coOwned ? ' (co-owned)' : ''}`);
+    if (options.include) {
+      log.info(`Filtering files by owner pattern: ${options.include}${options.exclusive ? ' (exclusive)' : ''}${options.coOwned ? ' (co-owned)' : ''}`);
 
       const ownedFiles: string[] = [];
       for (const file of filesToExtract) {
@@ -117,11 +117,11 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
           let matches: boolean;
           if (options.exclusive) {
             // Exclusive: all owners must match the pattern
-            matches = matchOwnersExclusive(owners, options.owner);
+            matches = matchOwnersExclusive(owners, options.include);
           } else {
             // Default: any owner matches the pattern
             matches = owners.some((owner) =>
-              matchOwnerPattern(owner, options.owner!)
+              matchOwnerPattern(owner, options.include!)
             );
           }
           if (matches) {
@@ -133,7 +133,7 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       filesToExtract = ownedFiles;
 
       if (filesToExtract.length === 0) {
-        log.warn(`No files match the owner pattern: ${options.owner}`);
+        log.warn(`No files match the owner pattern: ${options.include}`);
         return;
       }
 
@@ -153,7 +153,7 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
     log.info("\nNext steps:");
     log.info("  - Review the extracted files in your working directory");
     log.info("  - Use 'cg branch' command to create a branch and commit");
-    log.info("  - Example: cg branch -o @my-team -b my-branch -m 'Commit message' -p");
+    log.info("  - Example: cg branch -i @my-team -b my-branch -m 'Commit message' -p");
   } catch (err) {
     log.error(`\n✗ Extraction failed: ${err}`);
     process.exit(1);

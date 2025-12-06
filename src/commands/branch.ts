@@ -26,7 +26,7 @@ import {
 } from "../utils/state";
 
 export type BranchOptions = {
-  owner?: string;
+  include?: string; // Owner pattern to filter files (renamed from owner for consistency)
   branch?: string;
   message?: string;
   verify?: boolean;
@@ -72,7 +72,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
   let autoRecoverySucceeded = false;
 
   try {
-    if (!options.branch || !options.message || !options.owner) {
+    if (!options.branch || !options.message || !options.include) {
       throw new Error("Missing required options for branch creation");
     }
 
@@ -126,7 +126,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
     // First, identify the files owned by the specified owner
     filesToCommit = await getOwnerFiles(
-      options.owner,
+      options.include,
       options.isDefaultOwner || false,
       options.pathPattern,
       options.exclusive || false,
@@ -134,12 +134,12 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     );
     if (filesToCommit.length <= 0) {
       log.warn(
-        `No files found for ${options.owner}. Skipping branch creation.`
+        `No files found for ${options.include}. Skipping branch creation.`
       );
       return {
         success: false,
         branchName: options.branch,
-        owner: options.owner,
+        owner: options.include,
         files: [],
         pushed: false,
         error: "No files found for this owner",
@@ -165,7 +165,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
         });
         updateBranchState(operationState.id, options.branch, {
           name: options.branch,
-          owner: options.owner || "",
+          owner: options.include || "",
           files: filesToCommit,
           created: false,
           committed: false,
@@ -310,7 +310,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
 
         table.push([
           "✓",
-          options.owner,
+          options.include,
           options.branch,
           `${filesToCommit.length} file${filesToCommit.length !== 1 ? "s" : ""}`,
           pushed ? "✓" : "-",
@@ -328,7 +328,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       return {
         success: true,
         branchName: options.branch,
-        owner: options.owner,
+        owner: options.include,
         files: filesToCommit,
         pushed,
         prUrl,
@@ -425,7 +425,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       return {
         success: false,
         branchName: options.branch ?? "",
-        owner: options.owner ?? "",
+        owner: options.include ?? "",
         files: filesToCommit,
         pushed,
         prUrl,

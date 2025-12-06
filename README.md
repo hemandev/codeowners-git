@@ -75,7 +75,7 @@ The tool will automatically:
 
 ### Owner Pattern Matching
 
-The `--owner`, `--include`, and `--ignore` options support glob patterns for flexible owner filtering:
+The `--include` and `--ignore` options support glob patterns for flexible owner filtering:
 
 | Pattern | Description | Example Match |
 |---------|-------------|---------------|
@@ -198,7 +198,7 @@ Arguments:
 
 Options:
 
-- `--owner, -o` Code owner pattern (supports glob patterns like `*team`, `@org/*`)
+- `--include, -i` Code owner pattern to filter files (supports glob patterns like `*team`, `@org/*`)
 - `--branch, -b` Specify branch pattern
 - `--message, -m` Commit message for changes
 - `--no-verify, -n` Skips lint-staged and other checks before committing
@@ -217,40 +217,40 @@ Example:
 
 ```bash
 # Create a new branch with all files owned by @myteam
-cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p
+cg branch -i @myteam -b "feature/new-feature" -m "Add new feature" -p
 
 # Filter to only files in the packages directory
-cg branch "packages" -o @myteam -b "feature/packages" -m "Update packages" -p
+cg branch "packages" -i @myteam -b "feature/packages" -m "Update packages" -p
 
 # Filter with glob pattern (only .tsx files)
-cg branch "**/*.tsx" -o @myteam -b "feature/tsx" -m "Update tsx files" -p
+cg branch "**/*.tsx" -i @myteam -b "feature/tsx" -m "Update tsx files" -p
 
 # Filter multiple directories (brace expansion)
-cg branch "{packages,apps}" -o @myteam -b "feature/update" -m "Update packages and apps" -p
+cg branch "{packages,apps}" -i @myteam -b "feature/update" -m "Update packages and apps" -p
 
 # Create a branch and automatically create a pull request
-cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --pr
+cg branch -i @myteam -b "feature/new-feature" -m "Add new feature" -p --pr
 
 # Create a branch and automatically create a draft pull request
-cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --draft-pr
+cg branch -i @myteam -b "feature/new-feature" -m "Add new feature" -p --draft-pr
 
 # Add more commits to the same branch later
-cg branch -o @myteam -b "feature/new-feature" -m "Add more changes" --append -p
+cg branch -i @myteam -b "feature/new-feature" -m "Add more changes" --append -p
 
 # Use glob patterns to match multiple teams
-cg branch -o "*ce-*" -b "feature/ce-teams" -m "Changes for CE teams" -p
+cg branch -i "*ce-*" -b "feature/ce-teams" -m "Changes for CE teams" -p
 
 # Match all teams in an organization
-cg branch -o "@myorg/*" -b "feature/org-changes" -m "Org-wide changes" -p
+cg branch -i "@myorg/*" -b "feature/org-changes" -m "Org-wide changes" -p
 
 # Match multiple specific patterns
-cg branch -o "*orca,*rme" -b "feature/specific-teams" -m "Targeted changes" -p
+cg branch -i "*orca,*rme" -b "feature/specific-teams" -m "Targeted changes" -p
 
 # Only include files where @myteam is the sole owner (exclude co-owned files)
-cg branch -o @myteam -b "feature/exclusive" -m "Team exclusive changes" -p --exclusive
+cg branch -i @myteam -b "feature/exclusive" -m "Team exclusive changes" -p --exclusive
 
 # Only include co-owned files where @myteam is one of the owners
-cg branch -o @myteam -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
+cg branch -i @myteam -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
 ```
 
 ### `multi-branch`
@@ -365,7 +365,7 @@ Arguments:
 Options:
 
 - `--source, -s` **(required)** Source branch or commit to extract from
-- `--owner, -o` Filter extracted files by code owner (supports glob patterns like `*team`, `@org/*`)
+- `--include, -i` Filter extracted files by code owner (supports glob patterns like `*team`, `@org/*`)
 - `--compare-main` Compare source against main branch instead of detecting merge-base
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
@@ -377,11 +377,11 @@ Examples:
 cg extract -s feature/other-team
 
 # Extract only specific owner's files
-cg extract -s feature/other-team -o "@my-team"
+cg extract -s feature/other-team -i "@my-team"
 
 # Extract using glob patterns
-cg extract -s feature/other-team -o "*ce-*"
-cg extract -s feature/other-team -o "@myorg/*"
+cg extract -s feature/other-team -i "*ce-*"
+cg extract -s feature/other-team -i "@myorg/*"
 
 # Extract from a commit hash
 cg extract -s abc123def
@@ -391,16 +391,16 @@ cg extract -s feature/long-running --compare-main
 
 # Filter by path pattern
 cg extract "packages/" -s feature/other-team
-cg extract "{packages,apps}" -s feature/other-team -o "@my-team"
+cg extract "{packages,apps}" -s feature/other-team -i "@my-team"
 
 # Extract only files where owner is the sole owner (no co-owned files)
-cg extract -s feature/other-team -o "@my-team" --exclusive
+cg extract -s feature/other-team -i "@my-team" --exclusive
 
 # Extract only co-owned files (files with multiple owners)
 cg extract -s feature/other-team --co-owned
 
 # Extract co-owned files where @my-team is one of the owners
-cg extract -s feature/other-team -o "@my-team" --co-owned
+cg extract -s feature/other-team -i "@my-team" --co-owned
 ```
 
 > **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.

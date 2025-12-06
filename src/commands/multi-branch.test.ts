@@ -94,7 +94,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -119,7 +119,7 @@ describe("multi-branch command", () => {
       )
     ).toBe(true);
     expect(branchCallOptions).toBeTruthy();
-    expect(branchCallOptions.owner).toBe("@default-team");
+    expect(branchCallOptions.include).toBe("@default-team");
     expect(branchCallOptions.branch).toBe("feature/default-team");
   });
 
@@ -144,7 +144,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -162,11 +162,11 @@ describe("multi-branch command", () => {
     });
 
     expect(branchCalls.length).toBe(3);
-    expect(branchCalls[0].owner).toBe("@team-a");
+    expect(branchCalls[0].include).toBe("@team-a");
     expect(branchCalls[0].branch).toBe("feature/team-a");
-    expect(branchCalls[1].owner).toBe("@team-b");
+    expect(branchCalls[1].include).toBe("@team-b");
     expect(branchCalls[1].branch).toBe("feature/team-b");
-    expect(branchCalls[2].owner).toBe("@team-c");
+    expect(branchCalls[2].include).toBe("@team-c");
     expect(branchCalls[2].branch).toBe("feature/team-c");
 
     // Check options are passed through
@@ -191,7 +191,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -205,9 +205,9 @@ describe("multi-branch command", () => {
       message: "test",
     });
 
-    expect(branchCalls[0].owner).toBe("@org/team-name");
+    expect(branchCalls[0].include).toBe("@org/team-name");
     expect(branchCalls[0].branch).toBe("feature/org-team-name");
-    expect(branchCalls[1].owner).toBe("user@example.com");
+    expect(branchCalls[1].include).toBe("user@example.com");
     expect(branchCalls[1].branch).toBe("feature/user@example-com");
   });
 
@@ -224,21 +224,21 @@ describe("multi-branch command", () => {
 
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
-        if (options.owner === "@team-b") {
+        if (options.include === "@team-b") {
           return Promise.resolve({
             success: false,
             branchName: options.branch,
-            owner: options.owner,
+            owner: options.include,
             files: [],
             pushed: false,
             error: "Branch creation failed",
           });
         }
-        successfulOwners.push(options.owner);
+        successfulOwners.push(options.include);
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -302,7 +302,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -318,7 +318,7 @@ describe("multi-branch command", () => {
     });
 
     expect(branchCalls.length).toBe(3);
-    expect(branchCalls.map((c) => c.owner).sort()).toEqual([
+    expect(branchCalls.map((c) => c.include).sort()).toEqual([
       "@ce-backend",
       "@team-a",
       "@team-b",
@@ -350,7 +350,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -366,7 +366,7 @@ describe("multi-branch command", () => {
     });
 
     expect(branchCalls.length).toBe(3);
-    expect(branchCalls.map((c) => c.owner).sort()).toEqual([
+    expect(branchCalls.map((c) => c.include).sort()).toEqual([
       "@team-backend",
       "@team-frontend",
       "@team-mobile",
@@ -390,7 +390,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -434,7 +434,7 @@ describe("multi-branch command", () => {
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });
@@ -450,7 +450,7 @@ describe("multi-branch command", () => {
     });
 
     expect(branchCalls.length).toBe(3);
-    expect(branchCalls.map((c) => c.owner).sort()).toEqual([
+    expect(branchCalls.map((c) => c.include).sort()).toEqual([
       "@company/squad-1",
       "@org/team-a",
       "@org/team-b",
@@ -480,11 +480,11 @@ describe("multi-branch command", () => {
     mock.module("./branch", () => ({
       branch: mock((options: any) => {
         // All owners should succeed now, but owner-y will have no files and return early
-        successfulOwners.push(options.owner);
+        successfulOwners.push(options.include);
         return Promise.resolve({
           success: true,
           branchName: options.branch,
-          owner: options.owner,
+          owner: options.include,
           files: [],
           pushed: false,
         });

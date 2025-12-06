@@ -76,7 +76,7 @@ describe("E2E: Integration Workflows", () => {
       // Step 2: Create branches for specific teams
       const frontendResult = await helper.runCLI([
         "branch",
-        "-o", "@frontend-team",
+        "-i", "@frontend-team",
         "-b", "feature/frontend-components",
         "-m", "Add header and footer components"
       ]);
@@ -95,7 +95,7 @@ describe("E2E: Integration Workflows", () => {
 
       const backendResult = await helper.runCLI([
         "branch",
-        "-o", "@backend-team",
+        "-i", "@backend-team",
         "-b", "feature/backend-posts",
         "-m", "Add posts API and model"
       ]);
@@ -391,7 +391,7 @@ describe("E2E: Integration Workflows", () => {
       // Method 1: Use individual branch command
       const individualResult = await helper.runCLI([
         "branch",
-        "-o", "@frontend-team",
+        "-i", "@frontend-team",
         "-b", "feature/individual-test",
         "-m", "Individual branch test"
       ]);
@@ -492,7 +492,7 @@ describe("E2E: Integration Workflows", () => {
       // Commands should work despite dirty working directory
       const result = await helper.runCLI([
         "branch",
-        "-o", "@frontend-team",
+        "-i", "@frontend-team",
         "-b", "feature/dirty-test",
         "-m", "Test with dirty working directory"
       ]);

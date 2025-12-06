@@ -7,6 +7,8 @@ list and recover command enhancements
 ### Breaking Changes
 
 - **`list` command**: Removed `-o, --owner` flag - use `--include` instead for owner filtering
+- **`branch` command**: Renamed `-o, --owner` to `-i, --include` for consistency with other commands
+- **`extract` command**: Renamed `-o, --owner` to `-i, --include` for consistency with other commands
 - **Path patterns**: Changed from comma-separated to micromatch brace expansion syntax
   - Before: `packages,apps` (comma-separated)
   - After: `{packages,apps}` (brace expansion)
