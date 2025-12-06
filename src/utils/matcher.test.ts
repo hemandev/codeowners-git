@@ -172,8 +172,8 @@ describe("filterByPathPatterns", () => {
     ]);
   });
 
-  test("filters files by comma-separated patterns", () => {
-    const result = filterByPathPatterns(files, "packages/**,apps/web/**");
+  test("filters files by brace expansion patterns", () => {
+    const result = filterByPathPatterns(files, "{packages,apps/web}/**");
     expect(result).toEqual([
       "packages/foo/index.ts",
       "packages/bar/test.spec.tsx",
@@ -196,8 +196,8 @@ describe("filterByPathPatterns", () => {
     expect(result).toEqual([]);
   });
 
-  test("handles patterns with spaces after comma", () => {
-    const result = filterByPathPatterns(files, "packages/**, apps/web/**");
+  test("handles brace expansion with multiple directories", () => {
+    const result = filterByPathPatterns(files, "{packages,apps/web}/**");
     expect(result).toEqual([
       "packages/foo/index.ts",
       "packages/bar/test.spec.tsx",
@@ -223,8 +223,8 @@ describe("filterByPathPatterns", () => {
     ]);
   });
 
-  test("handles trailing slash with comma-separated patterns", () => {
-    const result = filterByPathPatterns(files, "packages/,apps/");
+  test("handles brace expansion with trailing slash", () => {
+    const result = filterByPathPatterns(files, "{packages,apps}/");
     expect(result).toEqual([
       "packages/foo/index.ts",
       "packages/bar/test.spec.tsx",
@@ -246,8 +246,8 @@ describe("filterByPathPatterns", () => {
     expect(result).toEqual(["apps/web/page.tsx"]);
   });
 
-  test("handles comma-separated directories without slashes", () => {
-    const result = filterByPathPatterns(files, "packages,apps");
+  test("handles brace expansion for directories without slashes", () => {
+    const result = filterByPathPatterns(files, "{packages,apps}");
     expect(result).toEqual([
       "packages/foo/index.ts",
       "packages/bar/test.spec.tsx",

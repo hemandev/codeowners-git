@@ -5,7 +5,7 @@ import {
   deleteOperationState,
   type OperationStateData,
 } from "../utils/state";
-import { getCurrentBranch, checkout, deleteBranch, branchExists } from "../utils/git";
+import { getCurrentBranch, checkout, deleteBranch, branchExists, restoreFilesFromBranch } from "../utils/git";
 import { select, confirm } from "@inquirer/prompts";
 
 export type RecoverOptions = {
@@ -60,12 +60,14 @@ const displayIncompleteOperations = (operations: OperationStateData[]): void => 
 
 /**
  * Perform recovery for a specific operation
+ * Returns true if recovery completed successfully, false if there were warnings
  */
-const performRecovery = async (
+export const performRecovery = async (
   state: OperationStateData,
   keepBranches: boolean
-): Promise<void> => {
+): Promise<boolean> => {
   log.header(`Recovering from operation ${state.id}`);
+  let hadWarnings = false;
 
   const currentBranch = await getCurrentBranch();
 
@@ -84,7 +86,31 @@ const performRecovery = async (
     log.info(`Already on original branch: ${state.originalBranch}`);
   }
 
-  // Step 2: Handle created branches
+  // Step 2: Restore files from committed branches before deleting them
+  if (!keepBranches && state.branches.length > 0) {
+    log.info("\nRestoring files from branches...");
+
+    for (const branch of state.branches) {
+      if (branch.committed && branch.files && branch.files.length > 0) {
+        try {
+          const exists = await branchExists(branch.name);
+          if (exists) {
+            log.info(`Restoring ${branch.files.length} file(s) from ${branch.name}...`);
+            await restoreFilesFromBranch(branch.name, branch.files);
+          } else {
+            log.warn(`Branch ${branch.name} no longer exists, cannot restore files`);
+            hadWarnings = true;
+          }
+        } catch (error) {
+          log.error(`Failed to restore files from ${branch.name}: ${error}`);
+          log.info(`Files may still be accessible from the branch if it exists`);
+          hadWarnings = true;
+        }
+      }
+    }
+  }
+
+  // Step 3: Handle created branches (delete or keep)
   if (!keepBranches && state.branches.length > 0) {
     log.info("\nCleaning up created branches...");
 
@@ -102,6 +128,7 @@ const performRecovery = async (
         } catch (error) {
           log.error(`Failed to delete branch ${branch.name}: ${error}`);
           log.info(`You may need to manually run: git branch -D ${branch.name}`);
+          hadWarnings = true;
         }
       }
     }
@@ -114,12 +141,13 @@ const performRecovery = async (
     }
   }
 
-  // Step 3: Clean up state file
+  // Step 4: Clean up state file
   log.info("\nCleaning up state file...");
   deleteOperationState(state.id);
   log.success(`State file deleted: ${state.id}`);
 
   log.success("\n✓ Recovery complete!");
+  return !hadWarnings;
 };
 
 /**

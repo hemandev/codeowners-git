@@ -91,6 +91,24 @@ The `--owner`, `--include`, and `--ignore` options support glob patterns for fle
 - Patterns are case-sensitive
 - Multiple patterns can be comma-separated
 
+### Path Pattern Matching
+
+Path patterns use [micromatch](https://github.com/micromatch/micromatch) syntax:
+
+| Pattern | Description | Example Match |
+|---------|-------------|---------------|
+| `src` | Directory (auto-appends `/**`) | All files in `src/` |
+| `src/` | Directory with trailing slash | All files in `src/` |
+| `**/*.ts` | Glob pattern | All `.ts` files |
+| `{src,docs}` | Brace expansion | Files in `src/` or `docs/` |
+| `packages/{a,b}/**` | Combined | Files in `packages/a/` or `packages/b/` |
+| `packages/**/{foo,bar}` | Nested braces | Directories named `foo` or `bar` under packages |
+
+**Key behavior:**
+- Directories without glob chars automatically match all files inside (`src` → `src/**`)
+- Use brace expansion `{a,b}` for multiple patterns (not comma-separated)
+- Supports full micromatch/glob syntax: `*`, `**`, `?`, `[...]`, `{...}`
+
 ## Commands
 
 ### `--version`
@@ -109,27 +127,43 @@ cg --version
 
 ### `list`
 
-List current CODEOWNERS entries.
+List changed files with their CODEOWNERS.
 
 Usage:
 
 ```bash
-codeowners-git list [options]
+codeowners-git list [pattern] [options]
 # or
-cg list [options]
+cg list [pattern] [options]
 ```
+
+Arguments:
+
+- `[pattern]` Optional path pattern to filter files (micromatch syntax)
 
 Options:
 
-- `--owner, -o` Filter by specific owner
-- `--include, -i` Include specific patterns
+- `--include, -i` Filter by owner patterns (glob syntax)
+- `--group, -g` Group files by code owner
 
-Example:
+Examples:
 
 ```bash
-codeowners-git list -o @myteam
-# or
-cg list -o @myteam
+# List all changed files with owners
+cg list
+
+# Filter by path pattern
+cg list src/
+cg list "packages/{basics,shared}/**"
+
+# Filter by owner pattern
+cg list --include "*ce-*"
+
+# Group output by owner
+cg list --group
+
+# Combine filters
+cg list "packages/" --include "@myorg/*" --group
 ```
 
 ### `branch`
@@ -146,7 +180,7 @@ cg branch [pattern] [options]
 
 Arguments:
 
-- `[pattern]` Optional path pattern to filter files (micromatch syntax, comma-separated). Examples: `packages`, `src/**/*.tsx`, `packages,apps`
+- `[pattern]` Optional path pattern to filter files (micromatch syntax). Examples: `packages`, `**/*.tsx`, `{packages,apps}`
 
 Options:
 
@@ -175,8 +209,8 @@ cg branch "packages" -o @myteam -b "feature/packages" -m "Update packages" -p
 # Filter with glob pattern (only .tsx files)
 cg branch "**/*.tsx" -o @myteam -b "feature/tsx" -m "Update tsx files" -p
 
-# Filter multiple directories (comma-separated)
-cg branch "packages,apps" -o @myteam -b "feature/update" -m "Update packages and apps" -p
+# Filter multiple directories (brace expansion)
+cg branch "{packages,apps}" -o @myteam -b "feature/update" -m "Update packages and apps" -p
 
 # Create a branch and automatically create a pull request
 cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --pr
@@ -211,7 +245,7 @@ cg multi-branch [pattern] [options]
 
 Arguments:
 
-- `[pattern]` Optional path pattern to filter files (micromatch syntax, comma-separated). Examples: `packages`, `src/**/*.tsx`, `packages,apps`
+- `[pattern]` Optional path pattern to filter files (micromatch syntax). Examples: `packages`, `**/*.tsx`, `{packages,apps}`
 
 Options:
 
@@ -244,8 +278,8 @@ cg multi-branch "packages" -b "feature/packages" -m "Update packages" -p
 # Filter with glob pattern (only .tsx files)
 cg multi-branch "**/*.tsx" -b "feature/tsx" -m "Update tsx files" -p
 
-# Filter multiple directories (comma-separated)
-cg multi-branch "packages,apps" -b "feature/update" -m "Update" -p
+# Filter multiple directories (brace expansion)
+cg multi-branch "{packages,apps}" -b "feature/update" -m "Update" -p
 
 # Create branches and automatically create pull requests for each
 cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --pr

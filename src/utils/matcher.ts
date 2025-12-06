@@ -74,8 +74,8 @@ export const matchOwners = (owners: string[], patterns: string): boolean => {
 /**
  * Filter files by path patterns using micromatch
  * @param files - Array of file paths to filter
- * @param pattern - Comma-separated micromatch patterns (e.g., "packages/**,src/**")
- * @returns Files that match at least one pattern, or all files if no pattern provided
+ * @param pattern - Micromatch pattern (use brace expansion for multiple: "{src,docs}/**")
+ * @returns Files that match the pattern, or all files if no pattern provided
  */
 export const filterByPathPatterns = (
   files: string[],
@@ -84,20 +84,25 @@ export const filterByPathPatterns = (
   // No pattern or empty = return all files
   if (!pattern || !pattern.trim()) return files;
 
-  const patterns = pattern.split(",").map((p) => {
-    const trimmed = p.trim();
-    // "." means all files
-    if (trimmed === ".") return "**";
-    // Already has glob characters - use as-is
-    if (/[*?[\]{}!]/.test(trimmed)) return trimmed;
-    // Trailing slash means directory (e.g., "packages/" -> "packages/**")
-    if (trimmed.endsWith("/")) return `${trimmed}**`;
-    // No glob chars and no extension in last segment - treat as directory
-    const lastSegment = trimmed.split("/").pop() || "";
-    if (!lastSegment.includes(".")) return `${trimmed}/**`;
-    // Otherwise use as-is (e.g., "README.md")
-    return trimmed;
-  });
+  let finalPattern = pattern.trim();
 
-  return micromatch(files, patterns, { dot: true });
+  // "." means all files
+  if (finalPattern === ".") {
+    finalPattern = "**";
+  }
+  // Trailing slash means directory (e.g., "packages/" -> "packages/**")
+  else if (finalPattern.endsWith("/")) {
+    finalPattern = `${finalPattern}**`;
+  }
+  // Check if pattern ends with what looks like a file (has extension)
+  else {
+    const lastSegment = finalPattern.split("/").pop() || "";
+    // If last segment has a dot followed by non-glob chars, it's a file pattern
+    const looksLikeFile = /\.[^*?[\]{}!/]+$/.test(lastSegment);
+    if (!looksLikeFile) {
+      finalPattern = `${finalPattern}/**`;
+    }
+  }
+
+  return micromatch(files, [finalPattern], { dot: true });
 };

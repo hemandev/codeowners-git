@@ -21,9 +21,18 @@ program
 program
   .command("list")
   .description("Lists all git changed files by CODEOWNER")
-  .option("-o, --owner <owner>", "Filter by specific code owner")
+  .argument(
+    "[pattern]",
+    "Path pattern to filter files (micromatch syntax, comma-separated)"
+  )
   .option("-i, --include <patterns>", "Filter by owner patterns")
-  .action(listCodeowners);
+  .option("-g, --group", "Group files by code owner")
+  .action((pattern: string | undefined, options) => {
+    listCodeowners({
+      ...options,
+      pathPattern: pattern,
+    });
+  });
 
 program
   .command("branch")

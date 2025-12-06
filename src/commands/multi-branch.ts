@@ -1,6 +1,7 @@
 import { getChangedFiles, getCurrentBranch, hasStagedChanges, getStagedFiles } from "../utils/git";
 import { getOwner } from "../utils/codeowners";
 import { branch, type BranchResult } from "./branch";
+import { performRecovery } from "./recover";
 import { log } from "../utils/logger";
 import Table from "cli-table3";
 import { filterByPathPatterns, matchOwnerPattern } from "../utils/matcher";
@@ -8,6 +9,7 @@ import {
   createOperationState,
   completeOperation,
   failOperation,
+  loadOperationState,
   type OperationStateData,
 } from "../utils/state";
 
@@ -253,20 +255,42 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       });
     }
 
-    // Mark operation as complete
+    // Mark operation as complete or failed based on results
     if (operationState) {
-      completeOperation(operationState.id, true); // Delete state file on success
+      if (failureCount === 0) {
+        completeOperation(operationState.id, true); // Delete state file on full success
+      } else {
+        // Keep state file for reference if there were any failures
+        failOperation(operationState.id, `${failureCount} branch(es) failed`);
+        log.info(`\nNote: ${failureCount} branch(es) failed. Files were auto-restored to working directory.`);
+        log.info(`State preserved for reference. Run 'codeowners-git recover --id ${operationState.id}' if needed.`);
+      }
     }
   } catch (err) {
     log.error(`Multi-branch operation failed: ${err}`);
 
-    // Mark operation as failed
+    // Auto-recover if we have operation state
     if (operationState) {
-      failOperation(operationState.id, String(err));
-      log.info("\nRecovery options:");
-      log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`);
-      log.info(`  2. Run 'codeowners-git recover --id ${operationState.id} --keep-branches' to return without deleting branches`);
-      log.info(`  3. Run 'codeowners-git recover --list' to see all incomplete operations`);
+      log.info("\nAttempting auto-recovery...");
+
+      // Refresh state to get latest branch info
+      const currentState = loadOperationState(operationState.id);
+
+      if (currentState) {
+        try {
+          const recovered = await performRecovery(currentState, false);
+          if (recovered) {
+            log.success("Auto-recovery completed successfully");
+          } else {
+            log.warn("Auto-recovery completed with warnings");
+          }
+        } catch (recoveryError) {
+          log.error(`Auto-recovery failed: ${recoveryError}`);
+          log.info("\nManual recovery options:");
+          log.info(`  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up`);
+          log.info(`  2. Run 'codeowners-git recover --list' to see all operations`);
+        }
+      }
     }
 
     process.exit(1);

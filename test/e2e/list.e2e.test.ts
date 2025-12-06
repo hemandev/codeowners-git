@@ -100,7 +100,7 @@ describe("E2E: list command", () => {
 
       await helper.stageFiles(changes);
 
-      const result = await helper.runCLI(["list", "-o", "@frontend-team"]);
+      const result = await helper.runCLI(["list", "-i", "@frontend-team"]);
 
       expect(result.success).toBe(true);
       expect(result.stdout).toContain("frontend");
@@ -150,10 +150,10 @@ describe("E2E: list command", () => {
 
       await helper.stageFiles(changes);
 
-      const result = await helper.runCLI(["list", "-o", "@non-existent-team"]);
+      const result = await helper.runCLI(["list", "-i", "@non-existent-team"]);
 
       expect(result.success).toBe(true);
-      expect(result.stdout).toContain("No matching files found");
+      expect(result.stdout).toContain("No data to display");
     });
   });
 

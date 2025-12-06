@@ -21,6 +21,7 @@ import {
   updateBranchState,
   completeOperation,
   failOperation,
+  deleteOperationState,
   type OperationStateData,
 } from "../utils/state";
 
@@ -66,6 +67,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
   let operationState: OperationStateData | null =
     options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
+  let autoRecoverySucceeded = false;
 
   try {
     if (!options.branch || !options.message || !options.owner) {
@@ -389,6 +391,23 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
           }
         } catch (cleanupError) {
           log.error(`Error during cleanup: ${cleanupError}`);
+          // If cleanup failed, don't mark as recovered
+          throw operationError;
+        }
+
+        // Cleanup succeeded - mark auto-recovery as successful
+        autoRecoverySucceeded = true;
+        log.success("Auto-recovery completed successfully");
+
+        // Delete state file since we recovered successfully
+        if (operationState && !isSubOperation) {
+          deleteOperationState(operationState.id);
+        }
+      } else {
+        // No branch was created, so nothing to clean up
+        autoRecoverySucceeded = true;
+        if (operationState && !isSubOperation) {
+          deleteOperationState(operationState.id);
         }
       }
 
@@ -411,9 +430,9 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       };
     }
 
-    // Provide recovery instructions for standalone operations
-    if (operationState) {
-      log.info("\nRecovery options:");
+    // Provide recovery instructions for standalone operations ONLY if auto-recovery failed
+    if (operationState && !autoRecoverySucceeded) {
+      log.info("\nAuto-recovery failed. Manual recovery options:");
       log.info(
         `  1. Run 'codeowners-git recover --id ${operationState.id}' to clean up and return to original branch`
       );
