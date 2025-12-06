@@ -1,16 +1,74 @@
 import micromatch from "micromatch";
 
+/**
+ * Normalize a string for pattern matching.
+ * Removes slashes so that `*` effectively matches across `/` boundaries.
+ * @example normalizeForMatching("@getoutreach/ce-orca") => "@getoutreachce-orca"
+ */
+const normalizeForMatching = (value: string): string => {
+  return value.replace(/\//g, "");
+};
+
+/**
+ * Check if a single owner matches a pattern string.
+ * Pattern can be comma-separated for multiple patterns.
+ *
+ * @param owner - Single owner string (e.g., "@getoutreach/ce-orca")
+ * @param patterns - Comma-separated patterns (e.g., "*ce-orca,*ce-rme")
+ * @returns true if owner matches any pattern
+ *
+ * @example
+ * matchOwnerPattern("@getoutreach/ce-orca", "*ce-orca") // true
+ * matchOwnerPattern("@getoutreach/ce-orca", "@getoutreach/ce-orca") // true (exact)
+ * matchOwnerPattern("@getoutreach/ce-orca", "*ce-orca,*ce-rme") // true
+ */
+export const matchOwnerPattern = (owner: string, patterns: string): boolean => {
+  if (!patterns || !patterns.trim()) return false;
+
+  const normalizedOwner = normalizeForMatching(owner);
+  const normalizedPatterns = patterns
+    .split(",")
+    .map((p) => normalizeForMatching(p.trim()))
+    .filter((p) => p.length > 0);
+
+  return micromatch.isMatch(normalizedOwner, normalizedPatterns);
+};
+
+/**
+ * Filter a list of owners by pattern, returning matching owners.
+ *
+ * @param owners - Array of owner strings
+ * @param patterns - Comma-separated patterns
+ * @returns Array of owners that match at least one pattern
+ *
+ * @example
+ * filterOwnersByPattern(
+ *   ["@getoutreach/ce-orca", "@getoutreach/ce-rme", "@getoutreach/fnd-core"],
+ *   "*ce-*"
+ * ) // Returns ["@getoutreach/ce-orca", "@getoutreach/ce-rme"]
+ */
+export const filterOwnersByPattern = (
+  owners: string[],
+  patterns: string
+): string[] => {
+  if (!patterns || !patterns.trim()) return owners;
+
+  return owners.filter((owner) => matchOwnerPattern(owner, patterns));
+};
+
+/**
+ * Check if ANY owner in a list matches the given patterns.
+ */
 export const matchOwners = (owners: string[], patterns: string): boolean => {
   if (!patterns || !patterns.trim()) return false;
 
-  const normalizedOwners = owners.map((owner) => {
-    return owner.replace(/\//g, "");
-  });
+  const normalizedOwners = owners.map(normalizeForMatching);
+  const normalizedPatterns = patterns
+    .split(",")
+    .map((p) => normalizeForMatching(p.trim()))
+    .filter((p) => p.length > 0);
 
-  const normalizedPatterns = patterns.replace(/\//g, "").split(",");
-
-  const matches = micromatch(normalizedOwners, normalizedPatterns);
-  return matches.length > 0;
+  return micromatch(normalizedOwners, normalizedPatterns).length > 0;
 };
 
 /**

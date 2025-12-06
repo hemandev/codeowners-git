@@ -14,6 +14,7 @@ import {
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
 import { createPRWithTemplate } from "../utils/github";
+import Table from "cli-table3";
 import {
   createOperationState,
   updateOperationState,
@@ -289,18 +290,32 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
         completeOperation(operationState.id, true); // Delete state file on success
       }
 
-      if (branchAlreadyExists && options.append) {
-        log.success(
-          options.push
-            ? `Changes committed to existing branch "${options.branch}" and pushed to remote.`
-            : `Changes committed to existing branch "${options.branch}".`
+      // Display summary (only for standalone operations, not when called from multi-branch)
+      if (!isSubOperation) {
+        log.header(
+          options.append ? "Branch update summary" : "Branch creation summary"
         );
-      } else {
-        log.success(
-          options.push
-            ? `Branch "${options.branch}" created, changes committed, and pushed to remote.`
-            : `Branch "${options.branch}" created and changes committed.`
-        );
+
+        const table = new Table({
+          head: ["Status", "Owner", "Branch", "Files", "Pushed", "PR"],
+          colWidths: [10, 25, 35, 10, 10, 50],
+          wordWrap: true,
+        });
+
+        table.push([
+          "✓",
+          options.owner,
+          options.branch,
+          `${filesToCommit.length} file${filesToCommit.length !== 1 ? "s" : ""}`,
+          pushed ? "✓" : "-",
+          prUrl || "-",
+        ]);
+
+        console.log(table.toString());
+
+        // Show committed files
+        console.log("\nFiles committed:");
+        filesToCommit.forEach((file) => console.log(`  - ${file}`));
       }
 
       // Return success result

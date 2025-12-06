@@ -73,6 +73,24 @@ The tool will automatically:
 - Set the PR title to your commit message
 - Create PRs against the repository's default branch
 
+### Owner Pattern Matching
+
+The `--owner`, `--include`, and `--ignore` options support glob patterns for flexible owner filtering:
+
+| Pattern | Description | Example Match |
+|---------|-------------|---------------|
+| `@org/team` | Exact match | `@org/team` only |
+| `*team` | Ends with | `@org/team`, `@company/team` |
+| `@org/*` | Starts with (org) | `@org/team-a`, `@org/team-b` |
+| `*ce-*` | Contains | `@org/ce-orca`, `@company/ce-team` |
+| `*orca,*rme` | Multiple patterns | Either pattern matches |
+
+**Key behavior:**
+- `*` matches any character **including `/`** (slashes are normalized)
+- `*/ce-orca` and `*ce-orca` behave identically
+- Patterns are case-sensitive
+- Multiple patterns can be comma-separated
+
 ## Commands
 
 ### `--version`
@@ -132,7 +150,7 @@ Arguments:
 
 Options:
 
-- `--owner, -o` Specify owner(s) to add/remove
+- `--owner, -o` Code owner pattern (supports glob patterns like `*team`, `@org/*`)
 - `--branch, -b` Specify branch pattern
 - `--message, -m` Commit message for changes
 - `--no-verify, -n` Skips lint-staged and other checks before committing
@@ -168,6 +186,15 @@ cg branch -o @myteam -b "feature/new-feature" -m "Add new feature" -p --draft-pr
 
 # Add more commits to the same branch later
 cg branch -o @myteam -b "feature/new-feature" -m "Add more changes" --append -p
+
+# Use glob patterns to match multiple teams
+cg branch -o "*ce-*" -b "feature/ce-teams" -m "Changes for CE teams" -p
+
+# Match all teams in an organization
+cg branch -o "@myorg/*" -b "feature/org-changes" -m "Org-wide changes" -p
+
+# Match multiple specific patterns
+cg branch -o "*orca,*rme" -b "feature/specific-teams" -m "Targeted changes" -p
 ```
 
 ### `multi-branch`
@@ -197,8 +224,8 @@ Options:
 - `--force, -f` Force push to remote
 - `--keep-branch-on-failure, -k` Keep created branches even if operation fails
 - `--default-owner, -d` Default owner to use when no codeowners are found for changed files
-- `--ignore` Comma-separated patterns to exclude codeowners (e.g., 'team-a,team-b')
-- `--include` Comma-separated patterns to include codeowners (e.g., 'team-_,@org/_')
+- `--ignore` Glob patterns to exclude codeowners (e.g., `*team-a`, `@org/*`)
+- `--include` Glob patterns to include codeowners (e.g., `*ce-*`, `@org/*`)
 - `--append` Add commits to existing branches instead of creating new ones
 - `--pr` Create pull requests after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
@@ -226,11 +253,17 @@ cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --pr
 # Create branches and automatically create draft pull requests for each
 cg multi-branch -b "feature/new-feature" -m "Add new feature" -p --draft-pr
 
-# Exclude specific teams
-cg multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "@ce-orca,@ce-ece"
+# Exclude specific teams using glob patterns
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "*ce-orca,*ce-ece"
 
-# Include only specific patterns
-cg multi-branch -b "feature/new-feature" -m "Add new feature" --include "@team-*"
+# Exclude all teams in an organization
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --ignore "@excluded-org/*"
+
+# Include only teams matching a pattern
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --include "*ce-*"
+
+# Include only specific organization
+cg multi-branch -b "feature/new-feature" -m "Add new feature" --include "@myorg/*"
 
 # Use default owner when no codeowners found
 cg multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
@@ -264,7 +297,7 @@ cg extract [options]
 Options:
 
 - `--source, -s` **(required)** Source branch or commit to extract from
-- `--owner, -o` Filter extracted files by code owner (supports micromatch patterns like `@team-*`)
+- `--owner, -o` Filter extracted files by code owner (supports glob patterns like `*team`, `@org/*`)
 - `--compare-main` Compare source against main branch instead of detecting merge-base
 
 Examples:
@@ -273,9 +306,12 @@ Examples:
 # Extract all changes from a branch (files will be unstaged in working directory)
 cg extract -s feature/other-team
 
-# Extract only specific owner's files using micromatch patterns
+# Extract only specific owner's files
 cg extract -s feature/other-team -o "@my-team"
-cg extract -s feature/other-team -o "@team-*"
+
+# Extract using glob patterns
+cg extract -s feature/other-team -o "*ce-*"
+cg extract -s feature/other-team -o "@myorg/*"
 
 # Extract from a commit hash
 cg extract -s abc123def

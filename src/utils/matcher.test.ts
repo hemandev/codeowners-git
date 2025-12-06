@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { matchOwners, filterByPathPatterns } from "./matcher";
+import {
+  matchOwners,
+  matchOwnerPattern,
+  filterOwnersByPattern,
+  filterByPathPatterns,
+} from "./matcher";
 
 describe("matchOwners", () => {
   const owners = [
@@ -61,6 +66,85 @@ describe("matchOwners", () => {
     expect(matchOwners(owners, "@invalid/team")).toBe(false);
     expect(matchOwners(owners, "invalid-*")).toBe(false);
     expect(matchOwners(owners, "*invalid")).toBe(false);
+  });
+});
+
+describe("matchOwnerPattern", () => {
+  test("should match exact owner", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "@getoutreach/ce-orca")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "@getoutreach/ce-rme")).toBe(false);
+  });
+
+  test("should match with trailing wildcard", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*ce-orca")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*orca")).toBe(true);
+  });
+
+  test("should match across slashes (slash normalized away)", () => {
+    // Both patterns should work the same due to slash normalization
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*/ce-orca")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*ce-orca")).toBe(true);
+  });
+
+  test("should match middle wildcards", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*ce-*")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/fnd-core", "*ce-*")).toBe(false);
+  });
+
+  test("should match multiple comma-separated patterns", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "*ce-orca,*ce-rme")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/ce-rme", "*ce-orca,*ce-rme")).toBe(true);
+    expect(matchOwnerPattern("@getoutreach/fnd-core", "*ce-orca,*ce-rme")).toBe(false);
+  });
+
+  test("should handle @ and / as literal characters", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "@getoutreach/*")).toBe(true);
+    expect(matchOwnerPattern("@otherorg/team", "@getoutreach/*")).toBe(false);
+  });
+
+  test("should return false for empty patterns", () => {
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "")).toBe(false);
+    expect(matchOwnerPattern("@getoutreach/ce-orca", "   ")).toBe(false);
+  });
+});
+
+describe("filterOwnersByPattern", () => {
+  const owners = [
+    "@getoutreach/ce-orca",
+    "@getoutreach/ce-rme",
+    "@getoutreach/fnd-core",
+    "@otherorg/team-alpha",
+  ];
+
+  test("should return all owners when no pattern provided", () => {
+    expect(filterOwnersByPattern(owners, "")).toEqual(owners);
+    expect(filterOwnersByPattern(owners, "   ")).toEqual(owners);
+  });
+
+  test("should filter by single pattern", () => {
+    expect(filterOwnersByPattern(owners, "*ce-*")).toEqual([
+      "@getoutreach/ce-orca",
+      "@getoutreach/ce-rme",
+    ]);
+  });
+
+  test("should filter by multiple patterns", () => {
+    expect(filterOwnersByPattern(owners, "*ce-orca,*fnd-*")).toEqual([
+      "@getoutreach/ce-orca",
+      "@getoutreach/fnd-core",
+    ]);
+  });
+
+  test("should return empty array when no matches", () => {
+    expect(filterOwnersByPattern(owners, "*nonexistent*")).toEqual([]);
+  });
+
+  test("should filter by organization pattern", () => {
+    expect(filterOwnersByPattern(owners, "@getoutreach/*")).toEqual([
+      "@getoutreach/ce-orca",
+      "@getoutreach/ce-rme",
+      "@getoutreach/fnd-core",
+    ]);
   });
 });
 

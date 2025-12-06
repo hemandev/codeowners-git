@@ -2,9 +2,8 @@ import { getChangedFiles, getCurrentBranch, hasStagedChanges, getStagedFiles } f
 import { getOwner } from "../utils/codeowners";
 import { branch, type BranchResult } from "./branch";
 import { log } from "../utils/logger";
-import micromatch from "micromatch";
 import Table from "cli-table3";
-import { filterByPathPatterns } from "../utils/matcher";
+import { filterByPathPatterns, matchOwnerPattern } from "../utils/matcher";
 import {
   createOperationState,
   completeOperation,
@@ -128,15 +127,15 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     // Apply filtering if ignore or include options are provided
     if (options.ignore || options.include) {
       const originalCount = codeowners.length;
-      
+
       if (options.ignore) {
-        const ignorePatterns = options.ignore.split(',').map(p => p.trim());
-        codeowners = codeowners.filter(owner => !micromatch.isMatch(owner, ignorePatterns));
-        log.info(`Filtered out ${originalCount - codeowners.length} codeowners using ignore patterns: ${ignorePatterns.join(", ")}`);
+        // Use matchOwnerPattern for consistent slash normalization
+        codeowners = codeowners.filter(owner => !matchOwnerPattern(owner, options.ignore!));
+        log.info(`Filtered out ${originalCount - codeowners.length} codeowners using ignore patterns: ${options.ignore}`);
       } else if (options.include) {
-        const includePatterns = options.include.split(',').map(p => p.trim());
-        codeowners = codeowners.filter(owner => micromatch.isMatch(owner, includePatterns));
-        log.info(`Filtered to ${codeowners.length} codeowners using include patterns: ${includePatterns.join(", ")}`);
+        // Use matchOwnerPattern for consistent slash normalization
+        codeowners = codeowners.filter(owner => matchOwnerPattern(owner, options.include!));
+        log.info(`Filtered to ${codeowners.length} codeowners using include patterns: ${options.include}`);
       }
 
       if (codeowners.length === 0) {

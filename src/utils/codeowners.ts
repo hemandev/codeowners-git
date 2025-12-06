@@ -1,6 +1,6 @@
 import Codeowners from "codeowners";
 import { getChangedFiles } from "./git";
-import { filterByPathPatterns } from "./matcher";
+import { filterByPathPatterns, matchOwnerPattern } from "./matcher";
 
 type CodeOwnersFile = InstanceType<typeof Codeowners>;
 
@@ -28,7 +28,7 @@ export const getOwner = (filePath: string): string[] => {
 };
 
 export const getOwnerFiles = async (
-  owner: string,
+  ownerPattern: string,
   includeUnowned: boolean = false,
   pathPattern?: string
 ): Promise<string[]> => {
@@ -43,6 +43,7 @@ export const getOwnerFiles = async (
     if (includeUnowned && owners.length === 0) {
       return true;
     }
-    return owners.includes(owner);
+    // Use pattern matching - supports exact match and glob patterns
+    return owners.some((owner) => matchOwnerPattern(owner, ownerPattern));
   });
 };

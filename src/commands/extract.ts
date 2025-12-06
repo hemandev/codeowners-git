@@ -8,7 +8,7 @@ import {
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwner } from "../utils/codeowners";
-import micromatch from "micromatch";
+import { matchOwnerPattern } from "../utils/matcher";
 
 export type ExtractOptions = {
   source: string; // Required: branch or commit to extract from
@@ -75,9 +75,11 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       for (const file of changedFiles) {
         const owners = await getOwner(file);
         if (owners.length > 0) {
-          // Check if any owner matches the micromatch pattern
-          const matchingOwners = micromatch(owners, options.owner);
-          if (matchingOwners.length > 0) {
+          // Check if any owner matches the pattern using unified matcher
+          const hasMatchingOwner = owners.some((owner) =>
+            matchOwnerPattern(owner, options.owner!)
+          );
+          if (hasMatchingOwner) {
             ownedFiles.push(file);
           }
         }
