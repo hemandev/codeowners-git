@@ -146,6 +146,7 @@ Options:
 - `--include, -i` Filter by owner patterns (glob syntax)
 - `--group, -g` Group files by code owner
 - `--exclusive, -e` Only include files with a single owner (no co-owned files)
+- `--co-owned, -c` Only include files with multiple owners (co-owned files)
 
 Examples:
 
@@ -171,6 +172,12 @@ cg list --exclusive
 
 # List only files where @myteam is the sole owner
 cg list --include "@myteam" --exclusive
+
+# List only co-owned files (files with multiple owners)
+cg list --co-owned
+
+# List co-owned files where @myteam is one of the owners
+cg list --include "@myteam" --co-owned
 ```
 
 ### `branch`
@@ -204,6 +211,7 @@ Options:
 - `--pr` Create a pull request after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create a draft pull request after pushing (requires `--push` and GitHub CLI)
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
+- `--co-owned, -c` Only include files with multiple owners (co-owned files)
 
 Example:
 
@@ -240,6 +248,9 @@ cg branch -o "*orca,*rme" -b "feature/specific-teams" -m "Targeted changes" -p
 
 # Only include files where @myteam is the sole owner (exclude co-owned files)
 cg branch -o @myteam -b "feature/exclusive" -m "Team exclusive changes" -p --exclusive
+
+# Only include co-owned files where @myteam is one of the owners
+cg branch -o @myteam -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
 ```
 
 ### `multi-branch`
@@ -275,8 +286,9 @@ Options:
 - `--pr` Create pull requests after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
 - `--exclusive, -e` Only include files where each owner is the sole owner (no co-owned files)
+- `--co-owned, -c` Only include files with multiple owners (co-owned files)
 
-> **Note:** You cannot use both `--ignore` and `--include` options at the same time.
+> **Note:** You cannot use both `--ignore` and `--include` options at the same time. You also cannot use both `--exclusive` and `--co-owned` options at the same time.
 
 Example:
 
@@ -319,6 +331,9 @@ cg multi-branch -b "feature/new-feature" -m "Add more changes" --append -p
 
 # Only include files where each owner is the sole owner (exclude co-owned files)
 cg multi-branch -b "feature/exclusive" -m "Exclusive changes" -p --exclusive
+
+# Only include co-owned files
+cg multi-branch -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
 ```
 
 This will:
@@ -353,6 +368,7 @@ Options:
 - `--owner, -o` Filter extracted files by code owner (supports glob patterns like `*team`, `@org/*`)
 - `--compare-main` Compare source against main branch instead of detecting merge-base
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
+- `--co-owned, -c` Only include files with multiple owners (co-owned files)
 
 Examples:
 
@@ -379,6 +395,12 @@ cg extract "{packages,apps}" -s feature/other-team -o "@my-team"
 
 # Extract only files where owner is the sole owner (no co-owned files)
 cg extract -s feature/other-team -o "@my-team" --exclusive
+
+# Extract only co-owned files (files with multiple owners)
+cg extract -s feature/other-team --co-owned
+
+# Extract co-owned files where @my-team is one of the owners
+cg extract -s feature/other-team -o "@my-team" --co-owned
 ```
 
 > **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.

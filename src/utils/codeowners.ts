@@ -35,7 +35,8 @@ export const getOwnerFiles = async (
   ownerPattern: string,
   includeUnowned: boolean = false,
   pathPattern?: string,
-  exclusive: boolean = false
+  exclusive: boolean = false,
+  coOwned: boolean = false
 ): Promise<string[]> => {
   let changedFiles = await getChangedFiles();
 
@@ -47,6 +48,10 @@ export const getOwnerFiles = async (
     // If includeUnowned is true and the file has no owners, include it
     if (includeUnowned && owners.length === 0) {
       return true;
+    }
+    // Co-owned filter: only files with multiple owners
+    if (coOwned && owners.length < 2) {
+      return false;
     }
     // Use exclusive matching if flag is set - only files where ALL owners match
     if (exclusive) {

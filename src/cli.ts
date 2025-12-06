@@ -31,7 +31,15 @@ program
     "-e, --exclusive",
     "Only include files where the owner is the sole owner (no co-owners)"
   )
+  .option(
+    "-c, --co-owned",
+    "Only include files with multiple owners (co-owned files)"
+  )
   .action((pattern: string | undefined, options) => {
+    if (options.exclusive && options.coOwned) {
+      console.error("Error: Cannot use both --exclusive and --co-owned options");
+      process.exit(1);
+    }
     listCodeowners({
       ...options,
       pathPattern: pattern,
@@ -73,7 +81,15 @@ program
     "-e, --exclusive",
     "Only include files where the owner is the sole owner (no co-owners)"
   )
+  .option(
+    "-c, --co-owned",
+    "Only include files with multiple owners (co-owned files)"
+  )
   .action((pattern: string | undefined, options) => {
+    if (options.exclusive && options.coOwned) {
+      console.error("Error: Cannot use both --exclusive and --co-owned options");
+      process.exit(1);
+    }
     branch({
       ...options,
       pathPattern: pattern,
@@ -132,7 +148,15 @@ program
     "-e, --exclusive",
     "Only include files where each owner is the sole owner (no co-owners)"
   )
+  .option(
+    "-c, --co-owned",
+    "Only include files with multiple owners (co-owned files)"
+  )
   .action((pattern: string | undefined, options) => {
+    if (options.exclusive && options.coOwned) {
+      console.error("Error: Cannot use both --exclusive and --co-owned options");
+      process.exit(1);
+    }
     multiBranch({
       ...options,
       pathPattern: pattern,
@@ -159,7 +183,15 @@ program
     "-e, --exclusive",
     "Only include files where the owner is the sole owner (no co-owners)"
   )
+  .option(
+    "-c, --co-owned",
+    "Only include files with multiple owners (co-owned files)"
+  )
   .action((pattern: string | undefined, options) => {
+    if (options.exclusive && options.coOwned) {
+      console.error("Error: Cannot use both --exclusive and --co-owned options");
+      process.exit(1);
+    }
     extract({
       ...options,
       pathPattern: pattern,

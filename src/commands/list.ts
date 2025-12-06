@@ -12,6 +12,7 @@ export type ListOptions = {
   group?: boolean;
   pathPattern?: string;
   exclusive?: boolean;
+  coOwned?: boolean;
 };
 
 export const listCodeowners = async (options: ListOptions) => {
@@ -34,14 +35,23 @@ export const listCodeowners = async (options: ListOptions) => {
       filteredFiles = filesWithOwners.filter(({ owners }) => owners.length === 1);
     }
 
+    // When --co-owned is used without --include, show only files with 2+ owners
+    if (options.coOwned && !options.include) {
+      filteredFiles = filesWithOwners.filter(({ owners }) => owners.length > 1);
+    }
+
     // Filter by owner patterns if specified
     if (options.include) {
       const patterns = options.include;
       // Use exclusive matching if --exclusive flag is set
       const matchFn = options.exclusive ? matchOwnersExclusive : matchOwners;
-      filteredFiles = filesWithOwners.filter(({ owners }) =>
-        matchFn(owners, patterns)
-      );
+      filteredFiles = filesWithOwners.filter(({ owners }) => {
+        // Co-owned filter: only files with multiple owners
+        if (options.coOwned && owners.length < 2) {
+          return false;
+        }
+        return matchFn(owners, patterns);
+      });
     }
 
     if (options.group) {

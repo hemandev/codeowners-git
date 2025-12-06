@@ -20,6 +20,7 @@ export type ExtractOptions = {
   compareMain?: boolean; // Compare source vs main instead of merge-base
   pathPattern?: string; // Optional: path pattern to filter files
   exclusive?: boolean; // Only include files where owner is sole owner
+  coOwned?: boolean; // Only include files with multiple owners
 };
 
 export const extract = async (options: ExtractOptions): Promise<void> => {
@@ -83,15 +84,36 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       }
     }
 
-    // Filter by owner if specified
+    // Filter by owner and/or co-owned flag
     let filesToExtract = changedFiles;
+
+    // When --co-owned is used without --owner, filter to files with 2+ owners
+    if (options.coOwned && !options.owner) {
+      log.info('Filtering to co-owned files (2+ owners)');
+      filesToExtract = changedFiles.filter((file) => {
+        const owners = getOwner(file);
+        return owners.length > 1;
+      });
+
+      if (filesToExtract.length === 0) {
+        log.warn('No co-owned files found');
+        return;
+      }
+
+      log.info(`Filtered to ${filesToExtract.length} co-owned file${filesToExtract.length !== 1 ? 's' : ''}`);
+    }
+
     if (options.owner) {
-      log.info(`Filtering files by owner pattern: ${options.owner}${options.exclusive ? ' (exclusive)' : ''}`);
+      log.info(`Filtering files by owner pattern: ${options.owner}${options.exclusive ? ' (exclusive)' : ''}${options.coOwned ? ' (co-owned)' : ''}`);
 
       const ownedFiles: string[] = [];
-      for (const file of changedFiles) {
+      for (const file of filesToExtract) {
         const owners = getOwner(file);
         if (owners.length > 0) {
+          // Co-owned filter: only files with multiple owners
+          if (options.coOwned && owners.length < 2) {
+            continue;
+          }
           let matches: boolean;
           if (options.exclusive) {
             // Exclusive: all owners must match the pattern
