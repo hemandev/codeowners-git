@@ -338,16 +338,21 @@ Extract file changes from a source branch or commit to your working directory (u
 Usage:
 
 ```bash
-codeowners-git extract [options]
+codeowners-git extract [pattern] [options]
 # or
-cg extract [options]
+cg extract [pattern] [options]
 ```
+
+Arguments:
+
+- `[pattern]` Optional path pattern to filter files (micromatch syntax). Examples: `packages`, `**/*.tsx`, `{packages,apps}`
 
 Options:
 
 - `--source, -s` **(required)** Source branch or commit to extract from
 - `--owner, -o` Filter extracted files by code owner (supports glob patterns like `*team`, `@org/*`)
 - `--compare-main` Compare source against main branch instead of detecting merge-base
+- `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 
 Examples:
 
@@ -367,6 +372,13 @@ cg extract -s abc123def
 
 # Extract comparing against main (instead of detecting merge-base)
 cg extract -s feature/long-running --compare-main
+
+# Filter by path pattern
+cg extract "packages/" -s feature/other-team
+cg extract "{packages,apps}" -s feature/other-team -o "@my-team"
+
+# Extract only files where owner is the sole owner (no co-owned files)
+cg extract -s feature/other-team -o "@my-team" --exclusive
 ```
 
 > **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.

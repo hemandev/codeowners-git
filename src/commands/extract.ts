@@ -8,12 +8,18 @@ import {
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwner } from "../utils/codeowners";
-import { matchOwnerPattern } from "../utils/matcher";
+import {
+  matchOwnerPattern,
+  matchOwnersExclusive,
+  filterByPathPatterns,
+} from "../utils/matcher";
 
 export type ExtractOptions = {
   source: string; // Required: branch or commit to extract from
   owner?: string; // Optional: micromatch pattern for owner filtering
   compareMain?: boolean; // Compare source vs main instead of merge-base
+  pathPattern?: string; // Optional: path pattern to filter files
+  exclusive?: boolean; // Only include files where owner is sole owner
 };
 
 export const extract = async (options: ExtractOptions): Promise<void> => {
@@ -57,7 +63,7 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
     }
 
     // Get changed files from source
-    const changedFiles = await getChangedFilesBetween(options.source, compareTarget);
+    let changedFiles = await getChangedFilesBetween(options.source, compareTarget);
 
     if (changedFiles.length === 0) {
       log.warn(`No changed files found in ${options.source}`);
@@ -66,20 +72,37 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
 
     log.info(`Found ${changedFiles.length} changed file${changedFiles.length !== 1 ? 's' : ''}`);
 
+    // Apply path filtering if specified
+    if (options.pathPattern) {
+      changedFiles = filterByPathPatterns(changedFiles, options.pathPattern);
+      log.info(`Filtered to ${changedFiles.length} file${changedFiles.length !== 1 ? 's' : ''} matching pattern: ${options.pathPattern}`);
+
+      if (changedFiles.length === 0) {
+        log.warn(`No files match the path pattern: ${options.pathPattern}`);
+        return;
+      }
+    }
+
     // Filter by owner if specified
     let filesToExtract = changedFiles;
     if (options.owner) {
-      log.info(`Filtering files by owner pattern: ${options.owner}`);
+      log.info(`Filtering files by owner pattern: ${options.owner}${options.exclusive ? ' (exclusive)' : ''}`);
 
       const ownedFiles: string[] = [];
       for (const file of changedFiles) {
-        const owners = await getOwner(file);
+        const owners = getOwner(file);
         if (owners.length > 0) {
-          // Check if any owner matches the pattern using unified matcher
-          const hasMatchingOwner = owners.some((owner) =>
-            matchOwnerPattern(owner, options.owner!)
-          );
-          if (hasMatchingOwner) {
+          let matches: boolean;
+          if (options.exclusive) {
+            // Exclusive: all owners must match the pattern
+            matches = matchOwnersExclusive(owners, options.owner);
+          } else {
+            // Default: any owner matches the pattern
+            matches = owners.some((owner) =>
+              matchOwnerPattern(owner, options.owner!)
+            );
+          }
+          if (matches) {
             ownedFiles.push(file);
           }
         }

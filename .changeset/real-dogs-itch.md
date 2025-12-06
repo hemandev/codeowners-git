@@ -15,5 +15,6 @@ list and recover command enhancements
 
 - **`list` command**: Added `[pattern]` positional argument for path filtering (consistent with `branch` and `multi-branch`)
 - **`list` command**: Added `--group, -g` flag to group files by code owner
-- **`list`, `branch`, `multi-branch` commands**: Added `--exclusive, -e` flag to only include files where the owner is the sole owner (excludes co-owned files)
+- **`list`, `branch`, `multi-branch`, `extract` commands**: Added `--exclusive, -e` flag to only include files where the owner is the sole owner (excludes co-owned files)
+- **`extract` command**: Added `[pattern]` positional argument for path filtering (consistent with other commands)
 - **Path patterns**: Full micromatch/glob syntax support including `*`, `**`, `?`, `[...]`, `{...}`

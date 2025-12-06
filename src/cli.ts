@@ -142,6 +142,10 @@ program
 program
   .command("extract")
   .description("Extract file changes from a branch or commit to working directory")
+  .argument(
+    "[pattern]",
+    "Path pattern to filter files (micromatch syntax, comma-separated)"
+  )
   .requiredOption("-s, --source <source>", "Source branch or commit to extract from")
   .option(
     "-o, --owner <owner>",
@@ -151,7 +155,16 @@ program
     "--compare-main",
     "Compare source against main branch instead of detecting merge-base"
   )
-  .action(extract);
+  .option(
+    "-e, --exclusive",
+    "Only include files where the owner is the sole owner (no co-owners)"
+  )
+  .action((pattern: string | undefined, options) => {
+    extract({
+      ...options,
+      pathPattern: pattern,
+    });
+  });
 
 program
   .command("recover")
