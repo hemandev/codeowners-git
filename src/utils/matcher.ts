@@ -72,6 +72,29 @@ export const matchOwners = (owners: string[], patterns: string): boolean => {
 };
 
 /**
+ * Check if ALL owners in a list match the given patterns.
+ * This is used for exclusive matching where files with co-owners outside the pattern are excluded.
+ *
+ * @param owners - Array of owner strings
+ * @param patterns - Comma-separated patterns
+ * @returns true only if ALL owners match at least one pattern
+ *
+ * @example
+ * matchOwnersExclusive(["@team-a"], "@team-a") // true - sole owner matches
+ * matchOwnersExclusive(["@team-a", "@team-b"], "@team-a") // false - has co-owner
+ * matchOwnersExclusive(["@team-a", "@team-b"], "@team-*") // true - all owners match pattern
+ */
+export const matchOwnersExclusive = (
+  owners: string[],
+  patterns: string
+): boolean => {
+  if (!patterns || !patterns.trim()) return false;
+  if (owners.length === 0) return false;
+
+  return owners.every((owner) => matchOwnerPattern(owner, patterns));
+};
+
+/**
  * Filter files by path patterns using micromatch
  * @param files - Array of file paths to filter
  * @param pattern - Micromatch pattern (use brace expansion for multiple: "{src,docs}/**")

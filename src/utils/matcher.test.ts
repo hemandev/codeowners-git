@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   matchOwners,
+  matchOwnersExclusive,
   matchOwnerPattern,
   filterOwnersByPattern,
   filterByPathPatterns,
@@ -66,6 +67,44 @@ describe("matchOwners", () => {
     expect(matchOwners(owners, "@invalid/team")).toBe(false);
     expect(matchOwners(owners, "invalid-*")).toBe(false);
     expect(matchOwners(owners, "*invalid")).toBe(false);
+  });
+});
+
+describe("matchOwnersExclusive", () => {
+  test("should match when sole owner matches pattern", () => {
+    expect(matchOwnersExclusive(["@team-a"], "@team-a")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca"], "@getoutreach/ce-orca")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca"], "*ce-orca")).toBe(true);
+  });
+
+  test("should not match when file has co-owners outside pattern", () => {
+    expect(matchOwnersExclusive(["@team-a", "@team-b"], "@team-a")).toBe(false);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca", "@getoutreach/fnd-core"], "*ce-*")).toBe(false);
+  });
+
+  test("should match when all owners match pattern", () => {
+    expect(matchOwnersExclusive(["@team-a", "@team-b"], "@team-*")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca", "@getoutreach/ce-rme"], "*ce-*")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/fnd-ade", "@getoutreach/fnd-core"], "*fnd-*")).toBe(true);
+  });
+
+  test("should match when all owners match multiple patterns", () => {
+    expect(matchOwnersExclusive(["@team-a", "@team-b"], "@team-a,@team-b")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca", "@getoutreach/fnd-core"], "*ce-*,*fnd-*")).toBe(true);
+  });
+
+  test("should return false for empty owners", () => {
+    expect(matchOwnersExclusive([], "@team-a")).toBe(false);
+  });
+
+  test("should return false for empty patterns", () => {
+    expect(matchOwnersExclusive(["@team-a"], "")).toBe(false);
+    expect(matchOwnersExclusive(["@team-a"], "   ")).toBe(false);
+  });
+
+  test("should handle organization-wide patterns", () => {
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca", "@getoutreach/fnd-core"], "@getoutreach/*")).toBe(true);
+    expect(matchOwnersExclusive(["@getoutreach/ce-orca", "@otherorg/team"], "@getoutreach/*")).toBe(false);
   });
 });
 

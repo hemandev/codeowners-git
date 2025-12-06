@@ -41,6 +41,7 @@ export type BranchOptions = {
   draftPr?: boolean;
   operationState?: OperationStateData; // For multi-branch operations
   pathPattern?: string; // Comma-separated path patterns to filter files
+  exclusive?: boolean; // Only include files where owner is sole owner
 };
 
 export type BranchResult = {
@@ -126,7 +127,8 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     filesToCommit = await getOwnerFiles(
       options.owner,
       options.isDefaultOwner || false,
-      options.pathPattern
+      options.pathPattern,
+      options.exclusive || false
     );
     if (filesToCommit.length <= 0) {
       log.warn(

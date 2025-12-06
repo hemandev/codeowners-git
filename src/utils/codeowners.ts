@@ -1,6 +1,10 @@
 import Codeowners from "codeowners";
 import { getChangedFiles } from "./git";
-import { filterByPathPatterns, matchOwnerPattern } from "./matcher";
+import {
+  filterByPathPatterns,
+  matchOwnerPattern,
+  matchOwnersExclusive,
+} from "./matcher";
 
 type CodeOwnersFile = InstanceType<typeof Codeowners>;
 
@@ -30,7 +34,8 @@ export const getOwner = (filePath: string): string[] => {
 export const getOwnerFiles = async (
   ownerPattern: string,
   includeUnowned: boolean = false,
-  pathPattern?: string
+  pathPattern?: string,
+  exclusive: boolean = false
 ): Promise<string[]> => {
   let changedFiles = await getChangedFiles();
 
@@ -42,6 +47,10 @@ export const getOwnerFiles = async (
     // If includeUnowned is true and the file has no owners, include it
     if (includeUnowned && owners.length === 0) {
       return true;
+    }
+    // Use exclusive matching if flag is set - only files where ALL owners match
+    if (exclusive) {
+      return matchOwnersExclusive(owners, ownerPattern);
     }
     // Use pattern matching - supports exact match and glob patterns
     return owners.some((owner) => matchOwnerPattern(owner, ownerPattern));

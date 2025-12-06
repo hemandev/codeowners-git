@@ -27,6 +27,10 @@ program
   )
   .option("-i, --include <patterns>", "Filter by owner patterns")
   .option("-g, --group", "Group files by code owner")
+  .option(
+    "-e, --exclusive",
+    "Only include files where the owner is the sole owner (no co-owners)"
+  )
   .action((pattern: string | undefined, options) => {
     listCodeowners({
       ...options,
@@ -64,6 +68,10 @@ program
   .option(
     "--draft-pr",
     "Create a draft pull request after pushing (requires --push)"
+  )
+  .option(
+    "-e, --exclusive",
+    "Only include files where the owner is the sole owner (no co-owners)"
   )
   .action((pattern: string | undefined, options) => {
     branch({
@@ -119,6 +127,10 @@ program
   .option(
     "--draft-pr",
     "Create draft pull requests after pushing (requires --push)"
+  )
+  .option(
+    "-e, --exclusive",
+    "Only include files where each owner is the sole owner (no co-owners)"
   )
   .action((pattern: string | undefined, options) => {
     multiBranch({

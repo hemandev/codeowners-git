@@ -1,12 +1,17 @@
 import { getOwner } from "../utils/codeowners";
 import { getChangedFiles } from "../utils/git";
 import { log } from "../utils/logger";
-import { matchOwners, filterByPathPatterns } from "../utils/matcher";
+import {
+  matchOwners,
+  matchOwnersExclusive,
+  filterByPathPatterns,
+} from "../utils/matcher";
 
 export type ListOptions = {
   include?: string;
   group?: boolean;
   pathPattern?: string;
+  exclusive?: boolean;
 };
 
 export const listCodeowners = async (options: ListOptions) => {
@@ -21,12 +26,21 @@ export const listCodeowners = async (options: ListOptions) => {
       owners: getOwner(file),
     }));
 
-    // Filter by owner patterns if specified
+    // Filter files based on options
     let filteredFiles = filesWithOwners;
+
+    // When --exclusive is used without --include, show only files with exactly 1 owner
+    if (options.exclusive && !options.include) {
+      filteredFiles = filesWithOwners.filter(({ owners }) => owners.length === 1);
+    }
+
+    // Filter by owner patterns if specified
     if (options.include) {
       const patterns = options.include;
+      // Use exclusive matching if --exclusive flag is set
+      const matchFn = options.exclusive ? matchOwnersExclusive : matchOwners;
       filteredFiles = filesWithOwners.filter(({ owners }) =>
-        matchOwners(owners, patterns)
+        matchFn(owners, patterns)
       );
     }
 

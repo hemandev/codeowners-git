@@ -145,6 +145,7 @@ Options:
 
 - `--include, -i` Filter by owner patterns (glob syntax)
 - `--group, -g` Group files by code owner
+- `--exclusive, -e` Only include files with a single owner (no co-owned files)
 
 Examples:
 
@@ -164,6 +165,12 @@ cg list --group
 
 # Combine filters
 cg list "packages/" --include "@myorg/*" --group
+
+# List only files with a single owner (exclude co-owned files)
+cg list --exclusive
+
+# List only files where @myteam is the sole owner
+cg list --include "@myteam" --exclusive
 ```
 
 ### `branch`
@@ -196,6 +203,7 @@ Options:
 - `--append` Add commits to existing branch instead of creating a new one
 - `--pr` Create a pull request after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create a draft pull request after pushing (requires `--push` and GitHub CLI)
+- `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 
 Example:
 
@@ -229,6 +237,9 @@ cg branch -o "@myorg/*" -b "feature/org-changes" -m "Org-wide changes" -p
 
 # Match multiple specific patterns
 cg branch -o "*orca,*rme" -b "feature/specific-teams" -m "Targeted changes" -p
+
+# Only include files where @myteam is the sole owner (exclude co-owned files)
+cg branch -o @myteam -b "feature/exclusive" -m "Team exclusive changes" -p --exclusive
 ```
 
 ### `multi-branch`
@@ -263,6 +274,7 @@ Options:
 - `--append` Add commits to existing branches instead of creating new ones
 - `--pr` Create pull requests after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
+- `--exclusive, -e` Only include files where each owner is the sole owner (no co-owned files)
 
 > **Note:** You cannot use both `--ignore` and `--include` options at the same time.
 
@@ -304,6 +316,9 @@ cg multi-branch -b "feature/new-feature" -m "Add new feature" -d "@default-team"
 
 # Add more commits to existing branches
 cg multi-branch -b "feature/new-feature" -m "Add more changes" --append -p
+
+# Only include files where each owner is the sole owner (exclude co-owned files)
+cg multi-branch -b "feature/exclusive" -m "Exclusive changes" -p --exclusive
 ```
 
 This will:

@@ -29,6 +29,7 @@ export type MultiBranchOptions = {
   pr?: boolean;
   draftPr?: boolean;
   pathPattern?: string; // Comma-separated path patterns to filter files
+  exclusive?: boolean; // Only include files where owner is sole owner
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
@@ -183,6 +184,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         draftPr: options.draftPr,
         operationState: operationState || undefined, // Pass operation state
         pathPattern: options.pathPattern, // Pass path pattern
+        exclusive: options.exclusive, // Pass exclusive flag
       });
 
       results.push(result);
