@@ -1,5 +1,5 @@
 import { getOwner } from "../utils/codeowners";
-import { getChangedFiles } from "../utils/git";
+import { getChangedFiles, hasUnstagedChanges, getUnstagedFiles } from "../utils/git";
 import { log } from "../utils/logger";
 import {
   matchOwners,
@@ -17,6 +17,16 @@ export type ListOptions = {
 
 export const listCodeowners = async (options: ListOptions) => {
   try {
+    // Warn about unstaged changes that will be ignored
+    if (await hasUnstagedChanges()) {
+      const unstagedFiles = await getUnstagedFiles();
+      log.warn("Warning: Unstaged changes detected (these will be ignored):");
+      unstagedFiles.forEach((file) => log.warn(`  - ${file}`));
+      log.info("\nOnly staged files will be processed.");
+      log.info("To stage files: git add <file>");
+      log.info("");
+    }
+
     // Get changed files and apply path filtering
     let changedFiles = await getChangedFiles();
     changedFiles = filterByPathPatterns(changedFiles, options.pathPattern);

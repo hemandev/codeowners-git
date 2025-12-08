@@ -89,13 +89,13 @@ export class E2ETestHelper {
   }
 
   /**
-   * Create file changes in the working directory
+   * Create file changes and stage them
    * @param changes - Array of file changes to apply
-   * @param stage - Whether to stage the changes (default: false)
-   *                Set to true when setting up files for commit
-   *                Set to false when creating working directory changes for testing
+   * @param stage - Whether to stage the changes (default: true)
+   *                Set to true when setting up files for commit (default behavior)
+   *                Set to false when creating working directory changes only
    */
-  async stageFiles(changes: GitFileChange[], stage: boolean = false): Promise<void> {
+  async stageFiles(changes: GitFileChange[], stage: boolean = true): Promise<void> {
     for (const change of changes) {
       const filePath = join(this.testRepoPath, change.path);
 

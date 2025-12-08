@@ -90,11 +90,30 @@ export const applyStash = async (stashId: string | null): Promise<boolean> => {
 
 export const getChangedFiles = async (): Promise<string[]> => {
   const status = await git.status();
-  // Return files that have changes in working directory (unstaged or untracked)
-  // This includes: untracked files (??) and modified but not staged files ( M)
+  // Return STAGED files (files added to git index)
+  // This includes files with index status other than ' ' or '?'
+  return status.files
+    .filter((file) => file.index !== " " && file.index !== "?")
+    .map((file) => file.path);
+};
+
+/**
+ * Get unstaged files (files with changes in working directory)
+ * Includes: untracked files (??) and modified but not staged files ( M)
+ */
+export const getUnstagedFiles = async (): Promise<string[]> => {
+  const status = await git.status();
   return status.files
     .filter((file) => file.working_dir !== " ")
     .map((file) => file.path);
+};
+
+/**
+ * Check if there are any unstaged files
+ */
+export const hasUnstagedChanges = async (): Promise<boolean> => {
+  const unstagedFiles = await getUnstagedFiles();
+  return unstagedFiles.length > 0;
 };
 
 /**

@@ -6,6 +6,7 @@ list and recover command enhancements
 
 ### Breaking Changes
 
+- **All commands**: Now work on **staged files** instead of unstaged files. Stage your changes with `git add` before running commands.
 - **`list` command**: Removed `-o, --owner` flag - use `--include` instead for owner filtering
 - **`branch` command**: Renamed `-o, --owner` to `-i, --include` for consistency with other commands
 - **`extract` command**: Renamed `-o, --owner` to `-i, --include` for consistency with other commands

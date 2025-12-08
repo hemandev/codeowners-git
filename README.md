@@ -13,7 +13,7 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Streamlining the review process with smaller, targeted PRs.
 - **Graceful error handling** with automatic recovery from failures.
 
-> **Note:** This tool works with **unstaged files**. Make sure to check if your files are unstaged before proceeding.
+> **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands.
 
 https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
 
@@ -338,7 +338,7 @@ cg multi-branch -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
 
 This will:
 
-1. Find all codeowners for the staged files in your repository
+1. Find all codeowners for the staged files
 2. Apply any ignore/include filters if specified
 3. For each codeowner (e.g., @team-a, @team-b):
    - Create a branch like `feature/new-feature/team-a`
@@ -348,7 +348,7 @@ This will:
 
 ### `extract`
 
-Extract file changes from a source branch or commit to your working directory (unstaged). This is useful when you want to copy changes from another branch to review and then commit using the `branch` command.
+Extract file changes from a source branch or commit to your working directory. This is useful when you want to copy changes from another branch to review and then stage them for committing using the `branch` command.
 
 Usage:
 
@@ -403,7 +403,7 @@ cg extract -s feature/other-team --co-owned
 cg extract -s feature/other-team -i "@my-team" --co-owned
 ```
 
-> **Note:** Files are extracted unstaged, allowing you to review and modify them. Use the `branch` command afterward to create a branch, commit, push, and create PRs.
+> **Note:** Files are extracted to your working directory (unstaged), allowing you to review and modify them. Stage the files with `git add`, then use the `branch` command to create a branch, commit, push, and create PRs.
 
 ### `recover`
 

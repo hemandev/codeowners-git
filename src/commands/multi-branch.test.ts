@@ -64,6 +64,8 @@ describe("multi-branch command", () => {
   test("should handle no changed files", async () => {
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve([])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     try {
@@ -81,6 +83,8 @@ describe("multi-branch command", () => {
   test("should use default owner when no codeowners found", async () => {
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js", "file2.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -128,6 +132,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js", "file2.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -179,6 +185,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -216,6 +224,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -286,6 +296,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js", "file2.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -333,6 +345,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js", "file2.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -379,6 +393,8 @@ describe("multi-branch command", () => {
   test("should handle empty result after filtering", async () => {
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -417,6 +433,8 @@ describe("multi-branch command", () => {
 
     mock.module("../utils/git", () => ({
       getChangedFiles: mock(() => Promise.resolve(["file1.js"])),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     mock.module("../utils/codeowners", () => ({
@@ -464,6 +482,8 @@ describe("multi-branch command", () => {
       getChangedFiles: mock(() =>
         Promise.resolve(["fileA.js", "fileB.js", "fileC.js"])
       ),
+      hasUnstagedChanges: mock(() => Promise.resolve(false)),
+      getUnstagedFiles: mock(() => Promise.resolve([])),
     }));
 
     // Simulate the exact scenario: fileA,B owned by X and Y, fileC owned by Z

@@ -1,6 +1,6 @@
 import {
-  hasStagedChanges,
-  getStagedFiles,
+  hasUnstagedChanges,
+  getUnstagedFiles,
   getBaseBranch,
   getChangedFilesBetween,
   extractFilesFromRef,
@@ -36,17 +36,14 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       process.exit(1);
     }
 
-    // Check for staged changes
-    if (await hasStagedChanges()) {
-      const stagedFiles = await getStagedFiles();
-      log.error("Changes need to be unstaged in order for this to work.");
-      log.info("\nStaged files detected:");
-      stagedFiles.forEach((file) => log.info(`  - ${file}`));
-      log.info("\nTo unstage files, run:");
-      log.info("  git restore --staged .");
-      log.info("\nOr to unstage specific files:");
-      log.info("  git restore --staged <file>");
-      process.exit(1);
+    // Warn about unstaged changes that will be ignored
+    if (await hasUnstagedChanges()) {
+      const unstagedFiles = await getUnstagedFiles();
+      log.warn("Warning: Unstaged changes detected (these will be ignored):");
+      unstagedFiles.forEach((file) => log.warn(`  - ${file}`));
+      log.info("\nOnly staged files will be processed.");
+      log.info("To stage files: git add <file>");
+      log.info("");
     }
 
     log.info("Starting file extraction process...");
