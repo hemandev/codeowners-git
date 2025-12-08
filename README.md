@@ -13,7 +13,7 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Streamlining the review process with smaller, targeted PRs.
 - **Graceful error handling** with automatic recovery from failures.
 
-> **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands.
+> ❗❗ ❗ **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands.
 
 https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
 
@@ -77,15 +77,16 @@ The tool will automatically:
 
 The `--include` and `--ignore` options support glob patterns for flexible owner filtering:
 
-| Pattern | Description | Example Match |
-|---------|-------------|---------------|
-| `@org/team` | Exact match | `@org/team` only |
-| `*team` | Ends with | `@org/team`, `@company/team` |
-| `@org/*` | Starts with (org) | `@org/team-a`, `@org/team-b` |
-| `*ce-*` | Contains | `@org/ce-orca`, `@company/ce-team` |
-| `*orca,*rme` | Multiple patterns | Either pattern matches |
+| Pattern      | Description       | Example Match                      |
+| ------------ | ----------------- | ---------------------------------- |
+| `@org/team`  | Exact match       | `@org/team` only                   |
+| `*team`      | Ends with         | `@org/team`, `@company/team`       |
+| `@org/*`     | Starts with (org) | `@org/team-a`, `@org/team-b`       |
+| `*ce-*`      | Contains          | `@org/ce-orca`, `@company/ce-team` |
+| `*orca,*rme` | Multiple patterns | Either pattern matches             |
 
 **Key behavior:**
+
 - `*` matches any character **including `/`** (slashes are normalized)
 - `*/ce-orca` and `*ce-orca` behave identically
 - Patterns are case-sensitive
@@ -95,16 +96,17 @@ The `--include` and `--ignore` options support glob patterns for flexible owner 
 
 Path patterns use [micromatch](https://github.com/micromatch/micromatch) syntax:
 
-| Pattern | Description | Example Match |
-|---------|-------------|---------------|
-| `src` | Directory (auto-appends `/**`) | All files in `src/` |
-| `src/` | Directory with trailing slash | All files in `src/` |
-| `**/*.ts` | Glob pattern | All `.ts` files |
-| `{src,docs}` | Brace expansion | Files in `src/` or `docs/` |
-| `packages/{a,b}/**` | Combined | Files in `packages/a/` or `packages/b/` |
-| `packages/**/{foo,bar}` | Nested braces | Directories named `foo` or `bar` under packages |
+| Pattern                 | Description                    | Example Match                                   |
+| ----------------------- | ------------------------------ | ----------------------------------------------- |
+| `src`                   | Directory (auto-appends `/**`) | All files in `src/`                             |
+| `src/`                  | Directory with trailing slash  | All files in `src/`                             |
+| `**/*.ts`               | Glob pattern                   | All `.ts` files                                 |
+| `{src,docs}`            | Brace expansion                | Files in `src/` or `docs/`                      |
+| `packages/{a,b}/**`     | Combined                       | Files in `packages/a/` or `packages/b/`         |
+| `packages/**/{foo,bar}` | Nested braces                  | Directories named `foo` or `bar` under packages |
 
 **Key behavior:**
+
 - Directories without glob chars automatically match all files inside (`src` → `src/**`)
 - Use brace expansion `{a,b}` for multiple patterns (not comma-separated)
 - Supports full micromatch/glob syntax: `*`, `**`, `?`, `[...]`, `{...}`
