@@ -30,7 +30,7 @@ jobs:
         with:
           commit: "chore(release): version package"
           title: "chore(release): version package"
-          publish: bun run build:dist && bunx changeset publish
+          publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

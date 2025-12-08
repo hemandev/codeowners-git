@@ -41,7 +41,8 @@
     "type-check": "bun tsc",
     "format": "biome format --write ./src",
     "lint": "biome lint ./src",
-    "prepublish": "bun run build:dist && bun run test:all"
+    "prepublish": "bun run build:dist && bun run test:all",
+    "release": "bun run build:dist && bunx changeset publish"
   },
   "bin": {
     "codeowners-git": "dist/cli.js",
