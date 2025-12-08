@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 2.0.1
+
+### Patch Changes
+
+- 2258f4b: Update readme
+
 ## 2.0.0
 
 ### Major Changes
