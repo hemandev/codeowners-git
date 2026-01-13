@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 2.0.2
+
+### Patch Changes
+
+- 0390ed2: fix: branch command incorrectly pushes all files
+
 ## 2.0.1
 
 ### Patch Changes
