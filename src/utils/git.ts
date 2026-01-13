@@ -236,11 +236,8 @@ export const commitChanges = async (
   { message, noVerify = false }: CommitOptions
 ): Promise<void> => {
   try {
-    log.info("Adding files to commit...");
-    await git.add(files);
-
     log.info(`Running commit with message: "${message}"`);
-    await git.commit(message, [], {
+    await git.commit(message, files, {
       ...(noVerify ? { "--no-verify": null } : {}),
     });
 
