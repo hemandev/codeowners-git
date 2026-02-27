@@ -90,8 +90,9 @@ export const listCodeowners = async (options: ListOptions) => {
 
       outputJson({
         command: "list",
-        files: filteredFiles.map(({ file, owners }) => ({ file, owners })),
-        ...(grouped ? { grouped } : {}),
+        ...(grouped
+          ? { grouped }
+          : { files: filteredFiles.map(({ file, owners }) => ({ file, owners })) }),
         filters: {
           include: options.include || null,
           pathPattern: options.pathPattern || null,

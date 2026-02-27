@@ -590,6 +590,20 @@ Every JSON response includes a `command` field identifying the source command.
     { "file": "src/index.ts", "owners": ["@org/team-a"] },
     { "file": "src/shared.ts", "owners": ["@org/team-a", "@org/team-b"] }
   ],
+  "filters": {
+    "include": null,
+    "pathPattern": null,
+    "exclusive": false,
+    "coOwned": false
+  }
+}
+```
+
+**`list --group --json`**
+
+```json
+{
+  "command": "list",
   "grouped": {
     "@org/team-a": ["src/index.ts", "src/shared.ts"],
     "@org/team-b": ["src/shared.ts"]
