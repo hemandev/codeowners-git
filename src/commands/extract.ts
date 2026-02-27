@@ -13,6 +13,8 @@ import {
   matchOwnersExclusive,
   filterByPathPatterns,
 } from "../utils/matcher";
+import Table from "cli-table3";
+import chalk from "chalk";
 
 export type ExtractOptions = {
   source: string; // Required: branch or commit to extract from
@@ -21,6 +23,7 @@ export type ExtractOptions = {
   pathPattern?: string; // Optional: path pattern to filter files
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
+  dryRun?: boolean; // Preview the operation without making any changes
 };
 
 export const extract = async (options: ExtractOptions): Promise<void> => {
@@ -135,6 +138,79 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
       }
 
       log.info(`Filtered to ${filesToExtract.length} file${filesToExtract.length !== 1 ? 's' : ''}`);
+    }
+
+    // Dry-run: show a complete summary and exit without extracting
+    if (options.dryRun) {
+      const excludedFiles = changedFiles.filter(
+        (f) => !filesToExtract.includes(f)
+      );
+
+      log.header("Dry Run Preview — extract");
+      console.log("");
+
+      // Operation details table
+      const detailsTable = new Table({
+        style: { head: ["cyan"] },
+        wordWrap: true,
+      });
+      detailsTable.push(
+        { [chalk.bold("Source")]: options.source },
+        {
+          [chalk.bold("Compare target")]: compareTarget || "auto-detected",
+        },
+        {
+          [chalk.bold("Files in source")]: `${changedFiles.length} changed file${changedFiles.length !== 1 ? "s" : ""}`,
+        },
+        {
+          [chalk.bold("Files to extract")]: `${filesToExtract.length} file${filesToExtract.length !== 1 ? "s" : ""}`,
+        },
+        {
+          [chalk.bold("Files excluded")]: `${excludedFiles.length} file${excludedFiles.length !== 1 ? "s" : ""} (filtered out)`,
+        }
+      );
+      if (options.include) {
+        detailsTable.push({
+          [chalk.bold("Owner filter")]: `${options.include}${options.exclusive ? " (exclusive)" : ""}`,
+        });
+      }
+      if (options.pathPattern) {
+        detailsTable.push({
+          [chalk.bold("Path filter")]: options.pathPattern,
+        });
+      }
+      if (options.coOwned) {
+        detailsTable.push({
+          [chalk.bold("Co-owned mode")]:
+            "Yes (only files with multiple owners)",
+        });
+      }
+      console.log(detailsTable.toString());
+
+      // Files to be extracted
+      console.log(
+        chalk.bold.green(
+          `\nFiles to be extracted (${filesToExtract.length}):`
+        )
+      );
+      filesToExtract.forEach((file) =>
+        console.log(`  ${chalk.green("+")} ${file}`)
+      );
+
+      // Excluded files
+      if (excludedFiles.length > 0) {
+        console.log(
+          chalk.bold.dim(
+            `\nExcluded files (${excludedFiles.length}):`
+          )
+        );
+        excludedFiles.forEach((file) =>
+          console.log(`  ${chalk.dim("-")} ${chalk.dim(file)}`)
+        );
+      }
+
+      console.log("");
+      return;
     }
 
     // Extract files to working directory (unstaged)

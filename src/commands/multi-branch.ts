@@ -1,9 +1,10 @@
 import { getChangedFiles, getCurrentBranch, hasUnstagedChanges, getUnstagedFiles } from "../utils/git";
-import { getOwner } from "../utils/codeowners";
+import { getOwner, getOwnerFiles } from "../utils/codeowners";
 import { branch, type BranchResult } from "./branch";
 import { performRecovery } from "./recover";
 import { log } from "../utils/logger";
 import Table from "cli-table3";
+import chalk from "chalk";
 import { filterByPathPatterns, matchOwnerPattern } from "../utils/matcher";
 import {
   createOperationState,
@@ -31,6 +32,7 @@ export type MultiBranchOptions = {
   pathPattern?: string; // Comma-separated path patterns to filter files
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
+  dryRun?: boolean; // Preview the operation without making any changes
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
@@ -145,6 +147,177 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       }
 
       log.info(`Processing ${codeowners.length} codeowners after filtering: ${codeowners.join(", ")}`);
+    }
+
+    // Dry-run: show a complete summary for all owners and exit
+    if (options.dryRun) {
+      log.header("Dry Run Preview — multi-branch");
+      console.log("");
+
+      // Global settings table
+      const settingsTable = new Table({
+        style: { head: ["cyan"] },
+        wordWrap: true,
+      });
+      settingsTable.push(
+        { [chalk.bold("Base branch name")]: options.branch },
+        { [chalk.bold("Base commit message")]: options.message },
+        { [chalk.bold("Total codeowners")]: `${codeowners.length}` },
+        { [chalk.bold("No-verify")]: !options.verify ? "Yes" : "No" },
+        {
+          [chalk.bold("Push")]: options.push
+            ? `Yes → ${options.remote || "origin"}${options.force ? " (force)" : ""}`
+            : "No",
+        },
+        {
+          [chalk.bold("Pull request")]: options.pr
+            ? "Yes"
+            : options.draftPr
+              ? "Yes (draft)"
+              : "No",
+        },
+        { [chalk.bold("Append mode")]: options.append ? "Yes" : "No" }
+      );
+      if (options.pathPattern) {
+        settingsTable.push({
+          [chalk.bold("Path filter")]: options.pathPattern,
+        });
+      }
+      if (options.exclusive) {
+        settingsTable.push({
+          [chalk.bold("Exclusive mode")]: "Yes (only files solely owned by each owner)",
+        });
+      }
+      if (options.coOwned) {
+        settingsTable.push({
+          [chalk.bold("Co-owned mode")]: "Yes (only files with multiple owners)",
+        });
+      }
+      if (options.defaultOwner) {
+        settingsTable.push({
+          [chalk.bold("Default owner")]: options.defaultOwner,
+        });
+      }
+      console.log(settingsTable.toString());
+      console.log("");
+
+      // Collect per-owner file breakdowns
+      type OwnerPreview = {
+        owner: string;
+        branchName: string;
+        commitMessage: string;
+        files: string[];
+      };
+      const previews: OwnerPreview[] = [];
+      const allCoveredFiles = new Set<string>();
+
+      for (const owner of codeowners) {
+        const sanitizedOwner = owner
+          .replace(/[^a-zA-Z0-9-_@]/g, "-")
+          .replace(/^@/, "");
+        const branchName = `${options.branch}/${sanitizedOwner}`;
+        const commitMessage = `${options.message} - ${owner}`;
+
+        const ownerFiles = await getOwnerFiles(
+          owner,
+          owner === options.defaultOwner,
+          options.pathPattern,
+          options.exclusive || false,
+          options.coOwned || false
+        );
+
+        for (const f of ownerFiles) allCoveredFiles.add(f);
+
+        previews.push({
+          owner,
+          branchName,
+          commitMessage,
+          files: ownerFiles,
+        });
+      }
+
+      // Summary table of all branches
+      const summaryTable = new Table({
+        head: ["Owner", "Branch", "Files", "Commit Message"],
+        colWidths: [22, 35, 8, 45],
+        wordWrap: true,
+        style: { head: ["cyan"] },
+      });
+
+      for (const p of previews) {
+        summaryTable.push([
+          p.owner,
+          p.branchName,
+          `${p.files.length}`,
+          p.commitMessage,
+        ]);
+      }
+
+      console.log(summaryTable.toString());
+
+      // Per-owner file details
+      console.log(chalk.bold.cyan("\nFiles by branch:"));
+      for (const p of previews) {
+        if (p.files.length > 0) {
+          console.log(
+            `\n${chalk.bold(p.branchName)} ${chalk.dim(`(${p.owner})`)} — ${p.files.length} file${p.files.length !== 1 ? "s" : ""}:`
+          );
+          p.files.forEach((file) =>
+            console.log(`  ${chalk.green("+")} ${file}`)
+          );
+        } else {
+          console.log(
+            `\n${chalk.bold(p.branchName)} ${chalk.dim(`(${p.owner})`)} — ${chalk.yellow("0 files (branch will be skipped)")}`
+          );
+        }
+      }
+
+      // Uncovered files (staged files not matched by any owner)
+      const uncoveredFiles = changedFiles.filter(
+        (f) => !allCoveredFiles.has(f)
+      );
+      if (uncoveredFiles.length > 0) {
+        console.log(
+          chalk.bold.yellow(
+            `\nUncovered staged files (${uncoveredFiles.length}) — not included in any branch:`
+          )
+        );
+        uncoveredFiles.forEach((file) =>
+          console.log(`  ${chalk.yellow("!")} ${file}`)
+        );
+      }
+
+      // Files without owners
+      if (filesWithoutOwners.length > 0 && !options.defaultOwner) {
+        console.log(
+          chalk.bold.yellow(
+            `\nFiles without CODEOWNERS (${filesWithoutOwners.length}):`
+          )
+        );
+        filesWithoutOwners.forEach((file) =>
+          console.log(`  ${chalk.yellow("?")} ${file}`)
+        );
+        console.log(
+          chalk.dim(
+            "  Tip: Use --default-owner <owner> to assign these files"
+          )
+        );
+      }
+
+      // Totals
+      console.log(chalk.bold.cyan("\nSummary:"));
+      console.log(`  Branches to create: ${chalk.bold(`${previews.length}`)}`);
+      console.log(
+        `  Total files covered: ${chalk.bold(`${allCoveredFiles.size}`)} of ${changedFiles.length} staged`
+      );
+      if (uncoveredFiles.length > 0) {
+        console.log(
+          `  Uncovered files:     ${chalk.yellow(`${uncoveredFiles.length}`)}`
+        );
+      }
+      console.log("");
+
+      return;
     }
 
     // Track detailed results for each branch

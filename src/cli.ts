@@ -85,6 +85,10 @@ program
     "-c, --co-owned",
     "Only include files with multiple owners (co-owned files)"
   )
+  .option(
+    "--dry-run",
+    "Preview the operation without making any changes"
+  )
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -152,6 +156,10 @@ program
     "-c, --co-owned",
     "Only include files with multiple owners (co-owned files)"
   )
+  .option(
+    "--dry-run",
+    "Preview the operation without making any changes"
+  )
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -186,6 +194,10 @@ program
   .option(
     "-c, --co-owned",
     "Only include files with multiple owners (co-owned files)"
+  )
+  .option(
+    "--dry-run",
+    "Preview the operation without making any changes"
   )
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {

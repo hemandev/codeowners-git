@@ -10,11 +10,13 @@ import {
   hasUnstagedChanges,
   getUnstagedFiles,
   restoreFilesFromBranch,
+  getChangedFiles,
 } from "../utils/git";
 import { log } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
 import { createPRWithTemplate } from "../utils/github";
 import Table from "cli-table3";
+import chalk from "chalk";
 import {
   createOperationState,
   updateOperationState,
@@ -43,6 +45,7 @@ export type BranchOptions = {
   pathPattern?: string; // Comma-separated path patterns to filter files
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
+  dryRun?: boolean; // Preview the operation without making any changes
 };
 
 export type BranchResult = {
@@ -142,6 +145,101 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     }
 
     log.file(`Files to be committed:\n  ${filesToCommit.join("\n  ")}`);
+
+    // Dry-run: show a complete summary and exit without performing any operations
+    if (options.dryRun) {
+      const allStagedFiles = await getChangedFiles();
+      const excludedFiles = allStagedFiles.filter(
+        (f) => !filesToCommit.includes(f)
+      );
+      const branchAlreadyExistsDry = await branchExists(options.branch);
+
+      if (!isSubOperation) {
+        log.header("Dry Run Preview — branch");
+        console.log("");
+      }
+
+      // Operation details table
+      const detailsTable = new Table({
+        style: { head: ["cyan"] },
+        wordWrap: true,
+      });
+      detailsTable.push(
+        { [chalk.bold("Owner pattern")]: options.include },
+        { [chalk.bold("Branch name")]: options.branch },
+        {
+          [chalk.bold("Branch exists")]: branchAlreadyExistsDry
+            ? options.append
+              ? "Yes (--append: will add commit)"
+              : "Yes (will fail without --append)"
+            : "No (will be created)",
+        },
+        { [chalk.bold("Commit message")]: options.message },
+        {
+          [chalk.bold("Files matched")]: `${filesToCommit.length} file${filesToCommit.length !== 1 ? "s" : ""}`,
+        },
+        {
+          [chalk.bold("Files excluded")]: `${excludedFiles.length} staged file${excludedFiles.length !== 1 ? "s" : ""} not matching`,
+        },
+        { [chalk.bold("No-verify")]: !options.verify ? "Yes" : "No" },
+        {
+          [chalk.bold("Push")]: options.push
+            ? `Yes → ${options.remote || "origin"}${options.force ? " (force)" : ""}`
+            : "No",
+        },
+        {
+          [chalk.bold("Pull request")]: options.pr
+            ? "Yes"
+            : options.draftPr
+              ? "Yes (draft)"
+              : "No",
+        }
+      );
+      if (options.pathPattern) {
+        detailsTable.push({
+          [chalk.bold("Path filter")]: options.pathPattern,
+        });
+      }
+      if (options.exclusive) {
+        detailsTable.push({
+          [chalk.bold("Exclusive mode")]: "Yes (only files solely owned by this owner)",
+        });
+      }
+      if (options.coOwned) {
+        detailsTable.push({
+          [chalk.bold("Co-owned mode")]: "Yes (only files with multiple owners)",
+        });
+      }
+      console.log(detailsTable.toString());
+
+      // Files to be committed
+      console.log(
+        chalk.bold.green(`\nFiles to be committed (${filesToCommit.length}):`)
+      );
+      filesToCommit.forEach((file) => console.log(`  ${chalk.green("+")} ${file}`));
+
+      // Excluded files
+      if (excludedFiles.length > 0) {
+        console.log(
+          chalk.bold.dim(
+            `\nExcluded staged files (${excludedFiles.length}):`,
+          )
+        );
+        excludedFiles.forEach((file) =>
+          console.log(`  ${chalk.dim("-")} ${chalk.dim(file)}`)
+        );
+      }
+
+      console.log("");
+
+      return {
+        success: true,
+        branchName: options.branch,
+        owner: options.include,
+        files: filesToCommit,
+        pushed: false,
+      };
+    }
 
     // Check if branch already exists
     const branchAlreadyExists = await branchExists(options.branch);
