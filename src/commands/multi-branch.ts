@@ -279,7 +279,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
       if (currentState) {
         try {
-          const recovered = await performRecovery(currentState, false);
+          const recovered = await performRecovery(currentState, false, { skipDirtyCheck: true });
           if (recovered) {
             log.success("Auto-recovery completed successfully");
           } else {

@@ -253,10 +253,11 @@ export const failOperation = (operationId: string, error?: string): void => {
 
 /**
  * Check if there are any incomplete operations
+ * Includes "failed" operations since they may still need recovery
  */
 export const hasIncompleteOperations = (): boolean => {
   const states = listOperationStates();
-  return states.some(s => s.currentState !== "complete" && s.currentState !== "failed");
+  return states.some(s => s.currentState !== "complete");
 };
 
 /**

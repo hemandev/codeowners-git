@@ -5,7 +5,7 @@ import {
   deleteOperationState,
   type OperationStateData,
 } from "../utils/state";
-import { getCurrentBranch, checkout, deleteBranch, branchExists, restoreFilesFromBranch } from "../utils/git";
+import { getCurrentBranch, checkout, deleteBranch, branchExists, restoreFilesFromBranch, hasUnstagedChanges, hasStagedChanges } from "../utils/git";
 import { select, confirm } from "@inquirer/prompts";
 
 export type RecoverOptions = {
@@ -64,10 +64,29 @@ const displayIncompleteOperations = (operations: OperationStateData[]): void => 
  */
 export const performRecovery = async (
   state: OperationStateData,
-  keepBranches: boolean
+  keepBranches: boolean,
+  options?: { skipDirtyCheck?: boolean }
 ): Promise<boolean> => {
   log.header(`Recovering from operation ${state.id}`);
   let hadWarnings = false;
+
+  // Check for uncommitted changes that could be overwritten during recovery
+  // Skip this check during auto-recovery (called internally after a failed operation)
+  if (!options?.skipDirtyCheck) {
+    const hasUnstaged = await hasUnstagedChanges();
+    const hasStaged = await hasStagedChanges();
+
+    if (hasUnstaged || hasStaged) {
+      log.warn("Working directory has uncommitted changes.");
+      log.warn("Recovery may overwrite files in your working directory.");
+      log.info("Consider committing or stashing your changes first:");
+      log.info("  git stash push -m 'before recovery'");
+      throw new Error("Working directory is not clean. Commit or stash changes before recovering.");
+    }
+  }
+
+  // Track branches where file restoration failed — these must NOT be deleted
+  const branchesWithRestoreFailure = new Set<string>();
 
   const currentBranch = await getCurrentBranch();
 
@@ -103,7 +122,8 @@ export const performRecovery = async (
           }
         } catch (error) {
           log.error(`Failed to restore files from ${branch.name}: ${error}`);
-          log.info(`Files may still be accessible from the branch if it exists`);
+          log.warn(`Branch ${branch.name} will be kept to prevent data loss`);
+          branchesWithRestoreFailure.add(branch.name);
           hadWarnings = true;
         }
       }
@@ -116,6 +136,14 @@ export const performRecovery = async (
 
     for (const branch of state.branches) {
       if (branch.created) {
+        // Skip deletion for branches where file restoration failed
+        if (branchesWithRestoreFailure.has(branch.name)) {
+          log.warn(`Skipping deletion of ${branch.name} — file restoration failed, branch preserved to prevent data loss`);
+          log.info(`  To recover files manually: git checkout ${branch.name} -- <file>`);
+          log.info(`  To delete manually when done: git branch -D ${branch.name}`);
+          continue;
+        }
+
         try {
           const exists = await branchExists(branch.name);
 
