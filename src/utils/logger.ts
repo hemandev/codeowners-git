@@ -12,6 +12,44 @@ const DEFAULT_COLUMN_WIDTH = 50;
 const MAX_LINE_LENGTH = 80;
 const MAX_PATH_LENGTH = 60;
 
+// Silent mode — when enabled, all log output and console output is suppressed.
+// Used by --json to prevent human-readable output from mixing with JSON.
+let _silent = false;
+
+// Original console methods saved for restoration
+const _origConsoleLog = console.log;
+const _origConsoleWarn = console.warn;
+const _origConsoleError = console.error;
+
+const noop = () => {};
+
+/**
+ * Enable or disable silent mode.
+ * When silent, all log.* methods become no-ops and console.log/warn/error are suppressed.
+ */
+export const setSilent = (silent: boolean) => {
+  _silent = silent;
+  if (silent) {
+    console.log = noop;
+    console.warn = noop;
+    console.error = noop;
+  } else {
+    console.log = _origConsoleLog;
+    console.warn = _origConsoleWarn;
+    console.error = _origConsoleError;
+  }
+};
+
+export const isSilent = () => _silent;
+
+/**
+ * Write JSON output to stdout, bypassing silent mode.
+ * Uses the original console.log so it always outputs even when silent.
+ */
+export const outputJson = (data: unknown) => {
+  _origConsoleLog(JSON.stringify(data, null, 2));
+};
+
 export const logFileList = (files: string[], owner?: string) => {
   if (files.length === 0) {
     log.info("No matching files found");

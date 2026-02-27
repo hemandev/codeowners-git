@@ -35,6 +35,7 @@ program
     "-c, --co-owned",
     "Only include files with multiple owners (co-owned files)"
   )
+  .option("--json", "Output results as JSON (suppresses all other output)")
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -89,6 +90,7 @@ program
     "--dry-run",
     "Preview the operation without making any changes"
   )
+  .option("--json", "Output results as JSON (suppresses all other output)")
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -160,6 +162,7 @@ program
     "--dry-run",
     "Preview the operation without making any changes"
   )
+  .option("--json", "Output results as JSON (suppresses all other output)")
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -199,6 +202,7 @@ program
     "--dry-run",
     "Preview the operation without making any changes"
   )
+  .option("--json", "Output results as JSON (suppresses all other output)")
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");

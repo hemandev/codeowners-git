@@ -6,7 +6,7 @@ import {
   extractFilesFromRef,
   getDefaultBranch,
 } from "../utils/git";
-import { log } from "../utils/logger";
+import { log, setSilent, outputJson } from "../utils/logger";
 import { getOwner } from "../utils/codeowners";
 import {
   matchOwnerPattern,
@@ -24,9 +24,15 @@ export type ExtractOptions = {
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
   dryRun?: boolean; // Preview the operation without making any changes
+  json?: boolean; // Output results as JSON
 };
 
 export const extract = async (options: ExtractOptions): Promise<void> => {
+  // Enable silent mode when JSON output is requested
+  if (options.json) {
+    setSilent(true);
+  }
+
   try {
     if (!options.source) {
       log.error("Missing required option: --source");
@@ -146,6 +152,27 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
         (f) => !filesToExtract.includes(f)
       );
 
+      // JSON dry-run output
+      if (options.json) {
+        outputJson({
+          command: "extract",
+          dryRun: true,
+          source: options.source,
+          compareTarget: compareTarget || null,
+          files: filesToExtract,
+          excludedFiles,
+          totalChanged: changedFiles.length,
+          options: {
+            include: options.include || null,
+            pathPattern: options.pathPattern || null,
+            exclusive: options.exclusive || false,
+            coOwned: options.coOwned || false,
+            compareMain: options.compareMain || false,
+          },
+        });
+        return;
+      }
+
       log.header("Dry Run Preview — extract");
       console.log("");
 
@@ -217,6 +244,19 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
     log.info("Extracting files to working directory...");
     await extractFilesFromRef(options.source, filesToExtract);
 
+    // JSON output for normal execution
+    if (options.json) {
+      outputJson({
+        command: "extract",
+        dryRun: false,
+        source: options.source,
+        compareTarget: compareTarget || null,
+        files: filesToExtract,
+        totalChanged: changedFiles.length,
+      });
+      return;
+    }
+
     log.success(`\n✓ Extracted ${filesToExtract.length} file${filesToExtract.length !== 1 ? 's' : ''} to working directory (unstaged)`);
 
     // Show extracted files
@@ -228,6 +268,10 @@ export const extract = async (options: ExtractOptions): Promise<void> => {
     log.info("  - Use 'cg branch' command to create a branch and commit");
     log.info("  - Example: cg branch -i @my-team -b my-branch -m 'Commit message' -p");
   } catch (err) {
+    if (options.json) {
+      outputJson({ command: "extract", error: String(err) });
+      process.exit(1);
+    }
     log.error(`\n✗ Extraction failed: ${err}`);
     process.exit(1);
   }

@@ -2,7 +2,7 @@ import { getChangedFiles, getCurrentBranch, hasUnstagedChanges, getUnstagedFiles
 import { getOwner, getOwnerFiles } from "../utils/codeowners";
 import { branch, type BranchResult } from "./branch";
 import { performRecovery } from "./recover";
-import { log } from "../utils/logger";
+import { log, setSilent, outputJson } from "../utils/logger";
 import Table from "cli-table3";
 import chalk from "chalk";
 import { filterByPathPatterns, matchOwnerPattern } from "../utils/matcher";
@@ -33,10 +33,16 @@ export type MultiBranchOptions = {
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
   dryRun?: boolean; // Preview the operation without making any changes
+  json?: boolean; // Output results as JSON
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
   let operationState: OperationStateData | null = null;
+
+  // Enable silent mode when JSON output is requested
+  if (options.json) {
+    setSilent(true);
+  }
 
   try {
     if (!options.branch || !options.message) {
@@ -151,6 +157,79 @@ export const multiBranch = async (options: MultiBranchOptions) => {
 
     // Dry-run: show a complete summary for all owners and exit
     if (options.dryRun) {
+      // Collect per-owner file breakdowns (shared between JSON and table output)
+      type OwnerPreview = {
+        owner: string;
+        branchName: string;
+        commitMessage: string;
+        files: string[];
+      };
+      const previews: OwnerPreview[] = [];
+      const allCoveredFiles = new Set<string>();
+
+      for (const owner of codeowners) {
+        const sanitizedOwner = owner
+          .replace(/[^a-zA-Z0-9-_@]/g, "-")
+          .replace(/^@/, "");
+        const branchName = `${options.branch}/${sanitizedOwner}`;
+        const commitMessage = `${options.message} - ${owner}`;
+
+        const ownerFiles = await getOwnerFiles(
+          owner,
+          owner === options.defaultOwner,
+          options.pathPattern,
+          options.exclusive || false,
+          options.coOwned || false
+        );
+
+        for (const f of ownerFiles) allCoveredFiles.add(f);
+
+        previews.push({
+          owner,
+          branchName,
+          commitMessage,
+          files: ownerFiles,
+        });
+      }
+
+      const uncoveredFiles = changedFiles.filter(
+        (f) => !allCoveredFiles.has(f)
+      );
+
+      // JSON dry-run output
+      if (options.json) {
+        outputJson({
+          command: "multi-branch",
+          dryRun: true,
+          owners: previews.map((p) => ({
+            owner: p.owner,
+            branch: p.branchName,
+            message: p.commitMessage,
+            files: p.files,
+          })),
+          uncoveredFiles,
+          filesWithoutOwners: options.defaultOwner ? [] : filesWithoutOwners,
+          totalFiles: changedFiles.length,
+          coveredFiles: allCoveredFiles.size,
+          options: {
+            baseBranch: options.branch,
+            baseMessage: options.message,
+            push: options.push || false,
+            remote: options.remote || "origin",
+            force: options.force || false,
+            pr: options.pr || false,
+            draftPr: options.draftPr || false,
+            noVerify: !options.verify,
+            append: options.append || false,
+            exclusive: options.exclusive || false,
+            coOwned: options.coOwned || false,
+            pathPattern: options.pathPattern || null,
+            defaultOwner: options.defaultOwner || null,
+          },
+        });
+        return;
+      }
+
       log.header("Dry Run Preview — multi-branch");
       console.log("");
 
@@ -201,41 +280,6 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       console.log(settingsTable.toString());
       console.log("");
 
-      // Collect per-owner file breakdowns
-      type OwnerPreview = {
-        owner: string;
-        branchName: string;
-        commitMessage: string;
-        files: string[];
-      };
-      const previews: OwnerPreview[] = [];
-      const allCoveredFiles = new Set<string>();
-
-      for (const owner of codeowners) {
-        const sanitizedOwner = owner
-          .replace(/[^a-zA-Z0-9-_@]/g, "-")
-          .replace(/^@/, "");
-        const branchName = `${options.branch}/${sanitizedOwner}`;
-        const commitMessage = `${options.message} - ${owner}`;
-
-        const ownerFiles = await getOwnerFiles(
-          owner,
-          owner === options.defaultOwner,
-          options.pathPattern,
-          options.exclusive || false,
-          options.coOwned || false
-        );
-
-        for (const f of ownerFiles) allCoveredFiles.add(f);
-
-        previews.push({
-          owner,
-          branchName,
-          commitMessage,
-          files: ownerFiles,
-        });
-      }
-
       // Summary table of all branches
       const summaryTable = new Table({
         head: ["Owner", "Branch", "Files", "Commit Message"],
@@ -273,9 +317,6 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       }
 
       // Uncovered files (staged files not matched by any owner)
-      const uncoveredFiles = changedFiles.filter(
-        (f) => !allCoveredFiles.has(f)
-      );
       if (uncoveredFiles.length > 0) {
         console.log(
           chalk.bold.yellow(
@@ -357,6 +398,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         pathPattern: options.pathPattern, // Pass path pattern
         exclusive: options.exclusive, // Pass exclusive flag
         coOwned: options.coOwned, // Pass co-owned flag
+        json: options.json, // Pass json flag (for silent push)
       });
 
       results.push(result);
@@ -440,7 +482,40 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         log.info(`State preserved for reference. Run 'codeowners-git recover --id ${operationState.id}' if needed.`);
       }
     }
+
+    // JSON output for normal execution
+    if (options.json) {
+      outputJson({
+        command: "multi-branch",
+        dryRun: false,
+        success: failureCount === 0,
+        totalOwners: codeowners.length,
+        successCount,
+        failureCount,
+        results: results.map((r) => ({
+          owner: r.owner,
+          branch: r.branchName,
+          success: r.success,
+          files: r.files,
+          pushed: r.pushed,
+          prUrl: r.prUrl || null,
+          prNumber: r.prNumber || null,
+          error: r.error || null,
+        })),
+      });
+    }
   } catch (err) {
+    // JSON error output
+    if (options.json) {
+      outputJson({
+        command: "multi-branch",
+        dryRun: false,
+        success: false,
+        error: String(err),
+      });
+      process.exit(1);
+    }
+
     log.error(`Multi-branch operation failed: ${err}`);
 
     // Auto-recover if we have operation state

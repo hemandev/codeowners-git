@@ -12,6 +12,8 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - Creating compact, team-specific branches with only their affected files.
 - Streamlining the review process with smaller, targeted PRs.
 - **Graceful error handling** with automatic recovery from failures.
+- **Dry-run previews** to see exactly what will happen before committing.
+- **JSON output** for piping to other tools, scripts, and agent workflows.
 
 > ❗❗ ❗ **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands.
 
@@ -149,6 +151,7 @@ Options:
 - `--group, -g` Group files by code owner
 - `--exclusive, -e` Only include files with a single owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--json` Output results as JSON (suppresses all other output)
 
 Examples:
 
@@ -180,6 +183,12 @@ cg list --co-owned
 
 # List co-owned files where @myteam is one of the owners
 cg list --include "@myteam" --co-owned
+
+# Output as JSON for piping to other tools
+cg list --json
+
+# JSON output with filters (pipe to jq)
+cg list -i "@myteam" --group --json | jq '.grouped'
 ```
 
 ### `branch`
@@ -214,6 +223,8 @@ Options:
 - `--draft-pr` Create a draft pull request after pushing (requires `--push` and GitHub CLI)
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--dry-run` Preview the operation without making any changes
+- `--json` Output results as JSON (suppresses all other output)
 
 Example:
 
@@ -253,6 +264,15 @@ cg branch -i @myteam -b "feature/exclusive" -m "Team exclusive changes" -p --exc
 
 # Only include co-owned files where @myteam is one of the owners
 cg branch -i @myteam -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
+
+# Preview what would happen without making any changes
+cg branch -i @myteam -b "feature/new" -m "Add feature" --dry-run
+
+# Dry-run with JSON output (for agents/scripts)
+cg branch -i @myteam -b "feature/new" -m "Add feature" --dry-run --json
+
+# Normal execution with JSON output
+cg branch -i @myteam -b "feature/new" -m "Add feature" -p --json
 ```
 
 ### `multi-branch`
@@ -289,6 +309,8 @@ Options:
 - `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
 - `--exclusive, -e` Only include files where each owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--dry-run` Preview the operation without making any changes
+- `--json` Output results as JSON (suppresses all other output)
 
 > **Note:** You cannot use both `--ignore` and `--include` options at the same time. You also cannot use both `--exclusive` and `--co-owned` options at the same time.
 
@@ -336,6 +358,18 @@ cg multi-branch -b "feature/exclusive" -m "Exclusive changes" -p --exclusive
 
 # Only include co-owned files
 cg multi-branch -b "feature/co-owned" -m "Co-owned changes" -p --co-owned
+
+# Preview all branches that would be created
+cg multi-branch -b "feature/migration" -m "Migrate" --dry-run
+
+# Dry-run with JSON output
+cg multi-branch -b "feature/migration" -m "Migrate" --dry-run --json
+
+# Pipe dry-run JSON to see owners with matching files
+cg multi-branch -b "mig" -m "Fix" --dry-run --json | jq '.owners[] | select(.files | length > 0)'
+
+# Normal execution with JSON output
+cg multi-branch -b "feature/migration" -m "Migrate" -p --json
 ```
 
 This will:
@@ -371,6 +405,8 @@ Options:
 - `--compare-main` Compare source against main branch instead of detecting merge-base
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--dry-run` Preview the operation without making any changes
+- `--json` Output results as JSON (suppresses all other output)
 
 Examples:
 
@@ -403,6 +439,21 @@ cg extract -s feature/other-team --co-owned
 
 # Extract co-owned files where @my-team is one of the owners
 cg extract -s feature/other-team -i "@my-team" --co-owned
+
+# Preview what would be extracted without making any changes
+cg extract -s feature/other-team --dry-run
+
+# Dry-run with owner filter
+cg extract -s feature/other-team -i "@my-team" --dry-run
+
+# Dry-run with JSON output (for agents/scripts)
+cg extract -s feature/other-team -i "@my-team" --dry-run --json
+
+# Normal execution with JSON output
+cg extract -s feature/other-team -i "@my-team" --json
+
+# Pipe JSON to jq to get just the file list
+cg extract -s feature/other-team --json | jq '.files'
 ```
 
 > **Note:** Files are extracted to your working directory (unstaged), allowing you to review and modify them. Stage the files with `git add`, then use the `branch` command to create a branch, commit, push, and create PRs.
@@ -476,6 +527,256 @@ The tool automatically handles:
 - Clean recovery to original state
 
 > **Note:** State files are stored in `~/.codeowners-git/state/` outside your project directory, so no `.gitignore` entries are needed.
+
+## Dry Run & JSON Output
+
+### Dry Run (`--dry-run`)
+
+Available on: `branch`, `multi-branch`, `extract`
+
+The `--dry-run` flag shows a complete preview of what would happen without performing any git operations. No branches are created, no files are committed, and nothing is pushed.
+
+```bash
+# Preview branch creation
+cg branch -i @myteam -b "feature/new" -m "Add feature" --dry-run
+
+# Preview all branches in a multi-branch run
+cg multi-branch -b "feature/migration" -m "Migrate" --dry-run
+
+# Preview file extraction
+cg extract -s feature/other-team -i "@myteam" --dry-run
+```
+
+The dry-run output includes:
+
+- **branch**: Owner, branch name, branch existence, commit message, matched files, excluded files, push/PR/flag settings
+- **multi-branch**: Per-owner breakdown (branch, message, files), uncovered files, unowned files, summary totals
+- **extract**: Source, compare target, files to extract, excluded files, filter settings
+
+### JSON Output (`--json`)
+
+Available on: `list`, `branch`, `multi-branch`, `extract`
+
+The `--json` flag outputs machine-readable JSON to stdout and suppresses all human-readable log messages. This is useful for piping to other tools, scripts, and agent workflows.
+
+```bash
+# JSON output for any command
+cg list --json
+cg branch -i @myteam -b "feature/new" -m "Add feature" --json
+cg multi-branch -b "feature/migration" -m "Migrate" --json
+cg extract -s feature/other-team --json
+```
+
+### Combining `--dry-run` and `--json`
+
+The two flags work together — `--dry-run --json` outputs the dry-run preview as structured JSON:
+
+```bash
+cg branch -i @myteam -b "feature/new" -m "Add feature" --dry-run --json
+cg multi-branch -b "feature/migration" -m "Migrate" --dry-run --json
+cg extract -s feature/other-team --dry-run --json
+```
+
+### JSON Schema Examples
+
+Every JSON response includes a `command` field identifying the source command.
+
+**`list --json`**
+
+```json
+{
+  "command": "list",
+  "files": [
+    { "file": "src/index.ts", "owners": ["@org/team-a"] },
+    { "file": "src/shared.ts", "owners": ["@org/team-a", "@org/team-b"] }
+  ],
+  "grouped": {
+    "@org/team-a": ["src/index.ts", "src/shared.ts"],
+    "@org/team-b": ["src/shared.ts"]
+  },
+  "filters": {
+    "include": null,
+    "pathPattern": null,
+    "exclusive": false,
+    "coOwned": false
+  }
+}
+```
+
+**`branch --dry-run --json`**
+
+```json
+{
+  "command": "branch",
+  "dryRun": true,
+  "owner": "@org/team-a",
+  "branch": "feature/new/team-a",
+  "branchExists": false,
+  "message": "Add feature - @org/team-a",
+  "files": ["src/index.ts"],
+  "excludedFiles": ["src/other.ts"],
+  "options": {
+    "push": true,
+    "remote": "origin",
+    "force": false,
+    "pr": false,
+    "draftPr": false,
+    "noVerify": false,
+    "append": false,
+    "exclusive": false,
+    "coOwned": false,
+    "pathPattern": null
+  }
+}
+```
+
+**`branch --json`** (normal execution)
+
+```json
+{
+  "command": "branch",
+  "dryRun": false,
+  "success": true,
+  "branchName": "feature/new/team-a",
+  "owner": "@org/team-a",
+  "files": ["src/index.ts"],
+  "pushed": true,
+  "prUrl": "https://github.com/org/repo/pull/42",
+  "prNumber": 42,
+  "error": null
+}
+```
+
+**`multi-branch --dry-run --json`**
+
+```json
+{
+  "command": "multi-branch",
+  "dryRun": true,
+  "owners": [
+    {
+      "owner": "@org/team-a",
+      "branch": "feature/migration/team-a",
+      "message": "Migrate - @org/team-a",
+      "files": ["src/index.ts"]
+    },
+    {
+      "owner": "@org/team-b",
+      "branch": "feature/migration/team-b",
+      "message": "Migrate - @org/team-b",
+      "files": ["src/shared.ts"]
+    }
+  ],
+  "uncoveredFiles": [],
+  "filesWithoutOwners": [],
+  "totalFiles": 2,
+  "coveredFiles": 2,
+  "options": {
+    "baseBranch": "feature/migration",
+    "baseMessage": "Migrate",
+    "push": false,
+    "remote": "origin",
+    "force": false,
+    "pr": false,
+    "draftPr": false,
+    "noVerify": false,
+    "append": false,
+    "exclusive": false,
+    "coOwned": false,
+    "pathPattern": null,
+    "defaultOwner": null
+  }
+}
+```
+
+**`multi-branch --json`** (normal execution)
+
+```json
+{
+  "command": "multi-branch",
+  "dryRun": false,
+  "success": true,
+  "totalOwners": 2,
+  "successCount": 2,
+  "failureCount": 0,
+  "results": [
+    {
+      "owner": "@org/team-a",
+      "branch": "feature/migration/team-a",
+      "success": true,
+      "files": ["src/index.ts"],
+      "pushed": true,
+      "prUrl": null,
+      "prNumber": null,
+      "error": null
+    }
+  ]
+}
+```
+
+**`extract --dry-run --json`**
+
+```json
+{
+  "command": "extract",
+  "dryRun": true,
+  "source": "feature/other-team",
+  "compareTarget": "main",
+  "files": ["src/component.tsx"],
+  "excludedFiles": ["src/unrelated.ts"],
+  "totalChanged": 2,
+  "options": {
+    "include": "@org/team-a",
+    "pathPattern": null,
+    "exclusive": false,
+    "coOwned": false,
+    "compareMain": false
+  }
+}
+```
+
+**`extract --json`** (normal execution)
+
+```json
+{
+  "command": "extract",
+  "dryRun": false,
+  "source": "feature/other-team",
+  "compareTarget": "main",
+  "files": ["src/component.tsx"],
+  "totalChanged": 2
+}
+```
+
+**Error responses** (any command)
+
+```json
+{
+  "command": "branch",
+  "error": "Error: No staged files found"
+}
+```
+
+### Piping Examples
+
+```bash
+# Count files per owner
+cg list --group --json | jq '.grouped | to_entries[] | {owner: .key, count: (.value | length)}'
+
+# Get list of branches that would be created
+cg multi-branch -b "mig" -m "Fix" --dry-run --json | jq '.owners[].branch'
+
+# Find owners with more than 5 files
+cg multi-branch -b "mig" -m "Fix" --dry-run --json | jq '.owners[] | select(.files | length > 5) | .owner'
+
+# Check if a branch operation succeeded
+cg branch -i @myteam -b "feat" -m "Update" -p --json | jq '.success'
+
+# List only extracted file paths
+cg extract -s feature/other --json | jq -r '.files[]'
+```
+
+> **Note:** The `recover` command does not support `--dry-run` or `--json` because it is an interactive command with user prompts.
 
 ## Contributing
 

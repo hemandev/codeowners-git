@@ -12,7 +12,7 @@ import {
   restoreFilesFromBranch,
   getChangedFiles,
 } from "../utils/git";
-import { log } from "../utils/logger";
+import { log, setSilent, outputJson } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
 import { createPRWithTemplate } from "../utils/github";
 import Table from "cli-table3";
@@ -46,6 +46,7 @@ export type BranchOptions = {
   exclusive?: boolean; // Only include files where owner is sole owner
   coOwned?: boolean; // Only include files with multiple owners
   dryRun?: boolean; // Preview the operation without making any changes
+  json?: boolean; // Output results as JSON
 };
 
 export type BranchResult = {
@@ -73,6 +74,11 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
   let autoRecoverySucceeded = false;
+
+  // Enable silent mode when JSON output is requested (and not a sub-operation)
+  if (options.json && !isSubOperation) {
+    setSilent(true);
+  }
 
   try {
     if (!options.branch || !options.message || !options.include) {
@@ -153,6 +159,39 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
         (f) => !filesToCommit.includes(f)
       );
       const branchAlreadyExistsDry = await branchExists(options.branch);
+
+      // JSON dry-run output
+      if (options.json && !isSubOperation) {
+        outputJson({
+          command: "branch",
+          dryRun: true,
+          owner: options.include,
+          branch: options.branch,
+          branchExists: branchAlreadyExistsDry,
+          message: options.message,
+          files: filesToCommit,
+          excludedFiles,
+          options: {
+            push: options.push || false,
+            remote: options.remote || "origin",
+            force: options.force || false,
+            pr: options.pr || false,
+            draftPr: options.draftPr || false,
+            noVerify: !options.verify,
+            append: options.append || false,
+            exclusive: options.exclusive || false,
+            coOwned: options.coOwned || false,
+            pathPattern: options.pathPattern || null,
+          },
+        });
+        return {
+          success: true,
+          branchName: options.branch,
+          owner: options.include,
+          files: filesToCommit,
+          pushed: false,
+        };
+      }
 
       if (!isSubOperation) {
         log.header("Dry Run Preview — branch");
@@ -319,6 +358,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
           upstream: options.upstream,
           force: options.force,
           noVerify: !options.verify,
+          silent: !!options.json,
         });
         pushed = true;
 
@@ -418,7 +458,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       }
 
       // Return success result
-      return {
+      const result: BranchResult = {
         success: true,
         branchName: options.branch,
         owner: options.include,
@@ -427,6 +467,17 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
         prUrl,
         prNumber,
       };
+
+      if (options.json && !isSubOperation) {
+        outputJson({
+          command: "branch",
+          dryRun: false,
+          ...result,
+          error: null,
+        });
+      }
+
+      return result;
     } catch (operationError) {
       // Handle operation errors with cleanup
       log.error(`Operation failed: ${operationError}`);
@@ -525,6 +576,23 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
         prNumber,
         error: String(err),
       };
+    }
+
+    // JSON error output for standalone operations
+    if (options.json && !isSubOperation) {
+      outputJson({
+        command: "branch",
+        dryRun: false,
+        success: false,
+        branchName: options.branch ?? "",
+        owner: options.include ?? "",
+        files: filesToCommit,
+        pushed,
+        prUrl: prUrl || null,
+        prNumber: prNumber || null,
+        error: String(err),
+      });
+      process.exit(1);
     }
 
     // Provide recovery instructions for standalone operations ONLY if auto-recovery failed

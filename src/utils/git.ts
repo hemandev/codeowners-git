@@ -16,6 +16,7 @@ export type PushOptions = {
   upstream?: string;
   force?: boolean;
   noVerify?: boolean;
+  silent?: boolean;
 };
 
 // Save the current state for recovery
@@ -263,6 +264,7 @@ export const pushBranch = async (
     upstream,
     force = false,
     noVerify = false,
+    silent = false,
   }: PushOptions = {}
 ): Promise<void> => {
   const targetUpstream = upstream || branchName;
@@ -282,8 +284,12 @@ export const pushBranch = async (
     }
 
     // Set up output handler by using spawn directly
+    // When silent mode is active (--json), capture output instead of inheriting stdio
+    const stdioOption: import("child_process").StdioOptions = silent
+      ? ["pipe", "pipe", "pipe"]
+      : ["inherit", "inherit", "inherit"];
     const gitProcess = spawn("git", ["push", ...pushArgs], {
-      stdio: ["inherit", "inherit", "inherit"],
+      stdio: stdioOption,
     });
 
     return new Promise((resolve, reject) => {

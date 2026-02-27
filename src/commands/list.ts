@@ -1,6 +1,6 @@
 import { getOwner } from "../utils/codeowners";
 import { getChangedFiles, hasUnstagedChanges, getUnstagedFiles } from "../utils/git";
-import { log } from "../utils/logger";
+import { log, setSilent, outputJson } from "../utils/logger";
 import {
   matchOwners,
   matchOwnersExclusive,
@@ -13,10 +13,15 @@ export type ListOptions = {
   pathPattern?: string;
   exclusive?: boolean;
   coOwned?: boolean;
+  json?: boolean;
 };
 
 export const listCodeowners = async (options: ListOptions) => {
   try {
+    if (options.json) {
+      setSilent(true);
+    }
+
     // Warn about unstaged changes that will be ignored
     if (await hasUnstagedChanges()) {
       const unstagedFiles = await getUnstagedFiles();
@@ -62,6 +67,39 @@ export const listCodeowners = async (options: ListOptions) => {
         }
         return matchFn(owners, patterns);
       });
+    }
+
+    // JSON output mode
+    if (options.json) {
+      // Build grouped data if --group is used
+      let grouped: Record<string, string[]> | undefined;
+      if (options.group) {
+        grouped = {};
+        for (const { file, owners } of filteredFiles) {
+          if (owners.length === 0) {
+            grouped["(unowned)"] = grouped["(unowned)"] || [];
+            grouped["(unowned)"].push(file);
+          } else {
+            for (const owner of owners) {
+              grouped[owner] = grouped[owner] || [];
+              grouped[owner].push(file);
+            }
+          }
+        }
+      }
+
+      outputJson({
+        command: "list",
+        files: filteredFiles.map(({ file, owners }) => ({ file, owners })),
+        ...(grouped ? { grouped } : {}),
+        filters: {
+          include: options.include || null,
+          pathPattern: options.pathPattern || null,
+          exclusive: options.exclusive || false,
+          coOwned: options.coOwned || false,
+        },
+      });
+      return;
     }
 
     if (options.group) {
@@ -144,6 +182,10 @@ export const listCodeowners = async (options: ListOptions) => {
       ]);
     }
   } catch (err) {
+    if (options.json) {
+      outputJson({ command: "list", error: String(err) });
+      process.exit(1);
+    }
     log.error(err as string);
     process.exit(1);
   }
