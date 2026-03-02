@@ -1,5 +1,11 @@
 # codeowners-git
 
+## 2.2.0
+
+### Minor Changes
+
+- 1c9ecc7: Add `--source` flag to `branch` and `multi-branch` commands to split changes directly from an existing branch or PR without manual staging. Add `--pr-body` flag to `branch` and `multi-branch` for custom PR body text that overrides the repo's PR template.
+
 ## 2.1.0
 
 ### Minor Changes
