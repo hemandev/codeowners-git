@@ -420,6 +420,20 @@ export const getChangedFilesBetween = async (
 };
 
 /**
+ * Stage specific files in the git index
+ */
+export const stageFiles = async (files: string[]): Promise<void> => {
+  if (files.length === 0) return;
+
+  try {
+    await git.add(files);
+    log.info(`Staged ${files.length} file${files.length !== 1 ? "s" : ""}`);
+  } catch (error) {
+    throw new Error(`Failed to stage files: ${error}`);
+  }
+};
+
+/**
  * Extract files from a specific git reference to working directory (unstaged)
  */
 export const extractFilesFromRef = async (

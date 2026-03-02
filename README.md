@@ -15,7 +15,7 @@ Managing large-scale migrations in big monorepos with multiple codeowners can be
 - **Dry-run previews** to see exactly what will happen before committing.
 - **JSON output** for piping to other tools, scripts, and agent workflows.
 
-> ❗❗ ❗ **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands.
+> ❗❗ ❗ **Note:** Starting from v2.0.0, this tool works with **staged files**. Stage your changes with `git add` before running commands. Alternatively, use `multi-branch --source <branch>` to split directly from an existing branch or PR without staging.
 
 https://github.com/user-attachments/assets/7cc0a924-f03e-47f3-baad-63eca9e8e4a8
 
@@ -221,10 +221,15 @@ Options:
 - `--append` Add commits to existing branch instead of creating a new one
 - `--pr` Create a pull request after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create a draft pull request after pushing (requires `--push` and GitHub CLI)
+- `--pr-body` Custom PR body text (overrides the repo's PR template). Requires `--pr` or `--draft-pr`.
 - `--exclusive, -e` Only include files where the owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--source, -s` Source branch or commit to extract changes from (creates a temp branch from the default branch). No staging required.
+- `--compare-main` Compare source against main branch instead of detecting merge-base (use with `--source`)
 - `--dry-run` Preview the operation without making any changes
 - `--json` Output results as JSON (suppresses all other output)
+
+> **Note:** `--source` cannot be used when there are staged changes.
 
 Example:
 
@@ -273,6 +278,19 @@ cg branch -i @myteam -b "feature/new" -m "Add feature" --dry-run --json
 
 # Normal execution with JSON output
 cg branch -i @myteam -b "feature/new" -m "Add feature" -p --json
+
+# Create a PR with a custom body (overrides repo PR template)
+cg branch -i @myteam -b "feature/new" -m "Add feature" -p --pr --pr-body "## Summary
+Migrated files owned by @myteam.
+
+## Reviewer Notes
+Auto-generated PR from codeowners-git."
+
+# Extract a single team's files from an existing branch
+cg branch -s feature/big-migration -i @myteam -b "feature/myteam-migration" -m "Migrate" -p --pr
+
+# Preview what would be extracted from a source branch
+cg branch -s origin/feature/big-migration -i @myteam -b "feature/myteam" -m "Migrate" --dry-run
 ```
 
 ### `multi-branch`
@@ -307,12 +325,15 @@ Options:
 - `--append` Add commits to existing branches instead of creating new ones
 - `--pr` Create pull requests after pushing (requires `--push` and GitHub CLI)
 - `--draft-pr` Create draft pull requests after pushing (requires `--push` and GitHub CLI)
+- `--pr-body` Custom PR body text (overrides the repo's PR template). Requires `--pr` or `--draft-pr`. The same body is used for all branches.
 - `--exclusive, -e` Only include files where each owner is the sole owner (no co-owned files)
 - `--co-owned, -c` Only include files with multiple owners (co-owned files)
+- `--source, -s` Source branch or commit to split (extracts changes onto a temp branch from the default branch). No staging required — the tool handles extraction automatically.
+- `--compare-main` Compare source against main branch instead of detecting merge-base (use with `--source`)
 - `--dry-run` Preview the operation without making any changes
 - `--json` Output results as JSON (suppresses all other output)
 
-> **Note:** You cannot use both `--ignore` and `--include` options at the same time. You also cannot use both `--exclusive` and `--co-owned` options at the same time.
+> **Note:** You cannot use both `--ignore` and `--include` options at the same time. You also cannot use both `--exclusive` and `--co-owned` options at the same time. `--source` cannot be used when there are staged changes.
 
 Example:
 
@@ -370,17 +391,40 @@ cg multi-branch -b "mig" -m "Fix" --dry-run --json | jq '.owners[] | select(.fil
 
 # Normal execution with JSON output
 cg multi-branch -b "feature/migration" -m "Migrate" -p --json
+
+# Split an existing branch (e.g., from a PR) into per-team branches
+cg multi-branch -s feature/big-migration -b "migration" -m "Migrate" -p --pr
+
+# Split from a remote ref
+cg multi-branch -s origin/feature/big-migration -b "migration" -m "Migrate" -p
+
+# Preview a source split with dry-run
+cg multi-branch -s feature/big-migration -b "migration" -m "Migrate" --dry-run
+
+# Combine --source with path filtering
+cg multi-branch -s feature/big-migration "src/services/**" -b "migration" -m "Migrate services" -p
+
+# Use a custom PR body for all generated PRs
+cg multi-branch -b "migration" -m "Migrate" -p --draft-pr --pr-body "## Summary
+Auto-split migration PR by codeowner."
 ```
 
 This will:
 
-1. Find all codeowners for the staged files
+1. Find all codeowners for the staged files (or from `--source` ref if provided)
 2. Apply any ignore/include filters if specified
 3. For each codeowner (e.g., @team-a, @team-b):
    - Create a branch like `feature/new-feature/team-a`
    - Commit only the files owned by that team
    - Add a commit message like "Add new feature - @team-a"
    - Push each branch to the remote if the `-p` flag is provided
+
+When `--source` is provided, the tool automatically:
+
+1. Creates a temporary branch from the default branch (main/master)
+2. Extracts the changed files from the source ref
+3. Stages them and runs the normal split logic
+4. Cleans up the temporary branch and returns to your original branch
 
 ### `extract`
 

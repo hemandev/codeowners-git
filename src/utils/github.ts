@@ -139,18 +139,24 @@ export const createPullRequest = async (
 
 /**
  * Create PR with template if available
+ * If prBody is provided, it is used directly instead of searching for a template file.
  */
 export const createPRWithTemplate = async (
   title: string,
   branchName: string,
-  options: { draft?: boolean; base?: string } = {}
+  options: { draft?: boolean; base?: string; prBody?: string } = {}
 ): Promise<{ url: string; number: number } | null> => {
-  const template = await findPRTemplate();
   let body = "";
 
-  if (template) {
-    body = template.content;
-    log.info("Using PR template for pull request body");
+  if (options.prBody) {
+    body = options.prBody;
+    log.info("Using provided PR body");
+  } else {
+    const template = await findPRTemplate();
+    if (template) {
+      body = template.content;
+      log.info("Using PR template for pull request body");
+    }
   }
 
   return createPullRequest({

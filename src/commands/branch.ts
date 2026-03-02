@@ -11,9 +11,14 @@ import {
   getUnstagedFiles,
   restoreFilesFromBranch,
   getChangedFiles,
+  getChangedFilesBetween,
+  extractFilesFromRef,
+  stageFiles,
+  hasStagedChanges,
 } from "../utils/git";
 import { log, setSilent, outputJson } from "../utils/logger";
 import { getOwnerFiles } from "../utils/codeowners";
+import { filterByPathPatterns } from "../utils/matcher";
 import { createPRWithTemplate } from "../utils/github";
 import Table from "cli-table3";
 import chalk from "chalk";
@@ -47,6 +52,9 @@ export type BranchOptions = {
   coOwned?: boolean; // Only include files with multiple owners
   dryRun?: boolean; // Preview the operation without making any changes
   json?: boolean; // Output results as JSON
+  prBody?: string; // Custom PR body text (overrides template)
+  source?: string; // Source branch or commit to extract changes from
+  compareMain?: boolean; // Compare source against main instead of detecting merge-base
 };
 
 export type BranchResult = {
@@ -74,6 +82,8 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
     options.operationState || null;
   const isSubOperation = !!options.operationState; // True if called from multi-branch
   let autoRecoverySucceeded = false;
+  let tempBranch: string | null = null;
+  let sourceOriginalBranch: string | null = null;
 
   // Enable silent mode when JSON output is requested (and not a sub-operation)
   if (options.json && !isSubOperation) {
@@ -94,8 +104,66 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
       throw new Error("Cannot use both --pr and --draft-pr options");
     }
 
-    // Warn about unstaged changes that will be ignored
-    if (await hasUnstagedChanges()) {
+    // When --source is provided, set up a temp branch with extracted files
+    // Skip this when called as a sub-operation from multi-branch (it handles its own source flow)
+    if (options.source && !isSubOperation) {
+      // Reject if user also has staged changes (ambiguous intent)
+      if (await hasStagedChanges()) {
+        throw new Error(
+          "Cannot use --source when there are staged changes. " +
+          "Either commit/unstage your changes first, or omit --source to use staged files."
+        );
+      }
+
+      sourceOriginalBranch = await getCurrentBranch();
+      log.info(`Extracting changes from source: ${options.source}`);
+
+      // Determine the base to compare against
+      const defaultBranch = await getDefaultBranch();
+      const compareTarget = options.compareMain ? defaultBranch : undefined;
+
+      if (compareTarget) {
+        log.info(`Comparing ${options.source} against ${compareTarget}...`);
+      }
+
+      // Get changed files from the source ref
+      let sourceFiles = await getChangedFilesBetween(options.source, compareTarget);
+
+      if (sourceFiles.length === 0) {
+        throw new Error(`No changed files found in ${options.source}`);
+      }
+
+      // Apply path filtering early
+      sourceFiles = filterByPathPatterns(sourceFiles, options.pathPattern);
+
+      if (sourceFiles.length === 0) {
+        throw new Error(
+          options.pathPattern
+            ? `No changed files found matching pattern: ${options.pathPattern}`
+            : `No changed files found in ${options.source}`
+        );
+      }
+
+      log.info(`Found ${sourceFiles.length} changed file${sourceFiles.length !== 1 ? "s" : ""} in source`);
+
+      // Create a temporary branch off the default branch
+      tempBranch = `cg-temp-${Date.now()}`;
+      log.info(`Creating temporary branch "${tempBranch}" from "${defaultBranch}"...`);
+      await checkout(defaultBranch);
+      await createBranch(tempBranch);
+
+      // Extract file contents from the source ref into the working directory
+      log.info("Extracting files from source...");
+      await extractFilesFromRef(options.source, sourceFiles);
+
+      // Stage the extracted files
+      await stageFiles(sourceFiles);
+
+      log.info("Files extracted and staged on temporary branch. Proceeding with branch creation...\n");
+    }
+
+    // Warn about unstaged changes that will be ignored (skip when using --source)
+    if (!(options.source && !isSubOperation) && await hasUnstagedChanges()) {
       const unstagedFiles = await getUnstagedFiles();
       log.warn("Warning: Unstaged changes detected (these will be ignored):");
       unstagedFiles.forEach((file) => log.warn(`  - ${file}`));
@@ -386,6 +454,7 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
             {
               draft: options.draftPr,
               base: defaultBranch,
+              prBody: options.prBody,
             }
           );
 
@@ -613,16 +682,35 @@ export const branch = async (options: BranchOptions): Promise<BranchResult> => {
   } finally {
     // Final cleanup - ensure we're back on the original branch with stashed changes restored
     try {
-      // Only try to switch back if we know where we came from and we're not already there
-      if (originalBranch) {
-        const currentBranch = await getCurrentBranch();
-        if (currentBranch !== originalBranch) {
-          await checkout(originalBranch);
+      // Clean up temporary branch created for --source flow
+      if (tempBranch) {
+        // Return to the real original branch (before --source setup)
+        if (sourceOriginalBranch) {
+          const currentBranch = await getCurrentBranch();
+          if (currentBranch !== sourceOriginalBranch) {
+            log.info(`Returning to original branch "${sourceOriginalBranch}"...`);
+            await checkout(sourceOriginalBranch);
+          }
+        }
+
+        // Delete the temporary branch
+        log.info(`Cleaning up temporary branch "${tempBranch}"...`);
+        await deleteBranch(tempBranch, true);
+      } else {
+        // Only try to switch back if we know where we came from and we're not already there
+        if (originalBranch) {
+          const currentBranch = await getCurrentBranch();
+          if (currentBranch !== originalBranch) {
+            await checkout(originalBranch);
+          }
         }
       }
     } catch (finalError) {
       log.error(`Error during final cleanup: ${finalError}`);
       log.info("Some manual cleanup may be required.");
+      if (tempBranch) {
+        log.info(`You can manually delete the temp branch with: git branch -D ${tempBranch}`);
+      }
     }
   }
 };

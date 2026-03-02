@@ -1,4 +1,17 @@
-import { getChangedFiles, getCurrentBranch, hasUnstagedChanges, getUnstagedFiles } from "../utils/git";
+import {
+  getChangedFiles,
+  getCurrentBranch,
+  hasUnstagedChanges,
+  getUnstagedFiles,
+  getDefaultBranch,
+  getChangedFilesBetween,
+  extractFilesFromRef,
+  stageFiles,
+  checkout,
+  createBranch as createGitBranch,
+  deleteBranch,
+  hasStagedChanges,
+} from "../utils/git";
 import { getOwner, getOwnerFiles } from "../utils/codeowners";
 import { branch, type BranchResult } from "./branch";
 import { performRecovery } from "./recover";
@@ -34,10 +47,15 @@ export type MultiBranchOptions = {
   coOwned?: boolean; // Only include files with multiple owners
   dryRun?: boolean; // Preview the operation without making any changes
   json?: boolean; // Output results as JSON
+  source?: string; // Source branch or commit to extract changes from
+  compareMain?: boolean; // Compare source against main instead of detecting merge-base
+  prBody?: string; // Custom PR body text (overrides template)
 };
 
 export const multiBranch = async (options: MultiBranchOptions) => {
   let operationState: OperationStateData | null = null;
+  let tempBranch: string | null = null;
+  let sourceOriginalBranch: string | null = null;
 
   // Enable silent mode when JSON output is requested
   if (options.json) {
@@ -63,8 +81,65 @@ export const multiBranch = async (options: MultiBranchOptions) => {
       throw new Error("Cannot use both --pr and --draft-pr options");
     }
 
-    // Warn about unstaged changes that will be ignored
-    if (await hasUnstagedChanges()) {
+    // When --source is provided, set up a temp branch with extracted files
+    if (options.source) {
+      // Reject if user also has staged changes (ambiguous intent)
+      if (await hasStagedChanges()) {
+        throw new Error(
+          "Cannot use --source when there are staged changes. " +
+          "Either commit/unstage your changes first, or omit --source to use staged files."
+        );
+      }
+
+      sourceOriginalBranch = await getCurrentBranch();
+      log.info(`Extracting changes from source: ${options.source}`);
+
+      // Determine the base to compare against
+      const defaultBranch = await getDefaultBranch();
+      const compareTarget = options.compareMain ? defaultBranch : undefined;
+
+      if (compareTarget) {
+        log.info(`Comparing ${options.source} against ${compareTarget}...`);
+      }
+
+      // Get changed files from the source ref
+      let sourceFiles = await getChangedFilesBetween(options.source, compareTarget);
+
+      if (sourceFiles.length === 0) {
+        throw new Error(`No changed files found in ${options.source}`);
+      }
+
+      // Apply path filtering early
+      sourceFiles = filterByPathPatterns(sourceFiles, options.pathPattern);
+
+      if (sourceFiles.length === 0) {
+        throw new Error(
+          options.pathPattern
+            ? `No changed files found matching pattern: ${options.pathPattern}`
+            : `No changed files found in ${options.source}`
+        );
+      }
+
+      log.info(`Found ${sourceFiles.length} changed file${sourceFiles.length !== 1 ? "s" : ""} in source`);
+
+      // Create a temporary branch off the default branch
+      tempBranch = `cg-temp-${Date.now()}`;
+      log.info(`Creating temporary branch "${tempBranch}" from "${defaultBranch}"...`);
+      await checkout(defaultBranch);
+      await createGitBranch(tempBranch);
+
+      // Extract file contents from the source ref into the working directory
+      log.info("Extracting files from source...");
+      await extractFilesFromRef(options.source, sourceFiles);
+
+      // Stage the extracted files
+      await stageFiles(sourceFiles);
+
+      log.info("Files extracted and staged on temporary branch. Proceeding with multi-branch split...\n");
+    }
+
+    // Warn about unstaged changes that will be ignored (skip when using --source)
+    if (!options.source && await hasUnstagedChanges()) {
       const unstagedFiles = await getUnstagedFiles();
       log.warn("Warning: Unstaged changes detected (these will be ignored):");
       unstagedFiles.forEach((file) => log.warn(`  - ${file}`));
@@ -76,6 +151,8 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     log.info(options.append ? "Starting multi-branch update process..." : "Starting multi-branch creation process...");
 
     // Create operation state
+    // When using --source, the "original branch" is the temp branch (where staged files live)
+    // We track the real original branch separately for cleanup
     const originalBranch = await getCurrentBranch();
     operationState = createOperationState("multi-branch", originalBranch, {
       verify: options.verify,
@@ -92,6 +169,8 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     let changedFiles = await getChangedFiles();
 
     // Apply path filtering (returns all files if no pattern)
+    // When --source is used, path filtering was already applied above, but
+    // getChangedFiles() re-reads from the index so this is still correct
     changedFiles = filterByPathPatterns(changedFiles, options.pathPattern);
 
     if (changedFiles.length === 0) {
@@ -399,6 +478,7 @@ export const multiBranch = async (options: MultiBranchOptions) => {
         exclusive: options.exclusive, // Pass exclusive flag
         coOwned: options.coOwned, // Pass co-owned flag
         json: options.json, // Pass json flag (for silent push)
+        prBody: options.prBody, // Pass custom PR body
       });
 
       results.push(result);
@@ -543,5 +623,26 @@ export const multiBranch = async (options: MultiBranchOptions) => {
     }
 
     process.exit(1);
+  } finally {
+    // Clean up temporary branch created for --source flow
+    if (tempBranch) {
+      try {
+        // Return to the original branch first
+        if (sourceOriginalBranch) {
+          const currentBranch = await getCurrentBranch();
+          if (currentBranch !== sourceOriginalBranch) {
+            log.info(`Returning to original branch "${sourceOriginalBranch}"...`);
+            await checkout(sourceOriginalBranch);
+          }
+        }
+
+        // Delete the temporary branch
+        log.info(`Cleaning up temporary branch "${tempBranch}"...`);
+        await deleteBranch(tempBranch, true);
+      } catch (cleanupError) {
+        log.warn(`Failed to clean up temporary branch "${tempBranch}": ${cleanupError}`);
+        log.info(`You can manually delete it with: git branch -D ${tempBranch}`);
+      }
+    }
   }
 };

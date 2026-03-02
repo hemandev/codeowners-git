@@ -79,6 +79,10 @@ program
     "Create a draft pull request after pushing (requires --push)"
   )
   .option(
+    "--pr-body <body>",
+    "Custom PR body text (overrides repo PR template, requires --pr or --draft-pr)"
+  )
+  .option(
     "-e, --exclusive",
     "Only include files where the owner is the sole owner (no co-owners)"
   )
@@ -91,6 +95,14 @@ program
     "Preview the operation without making any changes"
   )
   .option("--json", "Output results as JSON (suppresses all other output)")
+  .option(
+    "-s, --source <source>",
+    "Source branch or commit to extract changes from (creates a temp branch from the default branch)"
+  )
+  .option(
+    "--compare-main",
+    "Compare source against main branch instead of detecting merge-base (use with --source)"
+  )
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
@@ -151,6 +163,10 @@ program
     "Create draft pull requests after pushing (requires --push)"
   )
   .option(
+    "--pr-body <body>",
+    "Custom PR body text (overrides repo PR template, requires --pr or --draft-pr)"
+  )
+  .option(
     "-e, --exclusive",
     "Only include files where each owner is the sole owner (no co-owners)"
   )
@@ -163,6 +179,14 @@ program
     "Preview the operation without making any changes"
   )
   .option("--json", "Output results as JSON (suppresses all other output)")
+  .option(
+    "-s, --source <source>",
+    "Source branch or commit to split (extracts changes onto a temp branch from the default branch)"
+  )
+  .option(
+    "--compare-main",
+    "Compare source against main branch instead of detecting merge-base (use with --source)"
+  )
   .action((pattern: string | undefined, options) => {
     if (options.exclusive && options.coOwned) {
       console.error("Error: Cannot use both --exclusive and --co-owned options");
